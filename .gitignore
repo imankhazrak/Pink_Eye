@@ -57,6 +57,16 @@ Thumbs.db
 # Logs
 *.log
 logs/
+*.err
+*.out
+
+# SLURM
+*.slurm
+
+# Outputs
+/outputs/eye_crops_pred/
+/outputs/eye_crops_classification/
+/outputs/metadata
 
 # Environment variables
 .env
