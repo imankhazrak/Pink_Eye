@@ -142,6 +142,52 @@ Interactive mode: press **g** (good), **b** (bad), or **u** (uncertain).
 All decisions are saved with timestamps to
 `outputs/metadata/crop_review.csv`.
 
+## Step 2 – Pinkeye Classification on Eye Crops
+
+Step 2 trains image classifiers on cropped eye regions using stratified 5-fold
+cross-validation with publication-ready reporting outputs.
+
+### Dataset format
+
+```
+outputs/eye_crops_classification/
+├── healthy/    # class 0
+└── pink_eye/   # class 1
+```
+
+### Supported models
+
+- `resnet18` (pretrained ImageNet baseline)
+- `efficientnet` (EfficientNet-B0 pretrained baseline)
+- `cnn_transformer` (hybrid CNN + Transformer encoder)
+
+### Run training
+
+```bash
+python train.py --model resnet18
+python train.py --model efficientnet --loss-type focal --use-weighted-sampler
+python train.py --model cnn_transformer --epochs 40 --batch-size 12
+```
+
+### Key options
+
+- `--dataset-root` (default: `outputs/eye_crops_classification`)
+- `--num-folds` (default: `5`)
+- `--loss-type` (`weighted_ce` or `focal`)
+- `--use-weighted-sampler`
+- `--patience` (early stopping on validation `F1_pinkeye`)
+
+### Outputs
+
+```
+outputs/
+├── models/         # best checkpoint per fold
+├── logs/           # training logs and saved run config
+├── metrics/        # per-fold CSV + mean±std summary + predictions CSV
+├── plots/          # learning curves, ROC, confusion matrices
+└── explainability/ # Grad-CAM visualizations (CNN models)
+```
+
 ## Configuration
 
 All tuneable parameters live in `src/step1/config.py`:

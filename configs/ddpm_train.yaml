@@ -1,0 +1,32 @@
+seed: 42
+device: auto
+
+data:
+  root_dir: /users/PCS0229/imankhazrak/Pink_Eye/outputs/eye_crops_classification
+  image_size: 64
+
+model:
+  num_classes: 2
+  base_ch: 64
+  time_dim: 256
+
+diffusion:
+  timesteps: 1000
+  schedule: cosine
+
+train:
+  epochs: 500
+  batch_size: 16
+  lr: 0.0002
+  weight_decay: 0.0
+  num_workers: 2
+  ema_decay: 0.9999
+  grad_clip: 1.0
+  save_every: 50
+  sample_every: 25
+
+output:
+  checkpoint_dir: /users/PCS0229/imankhazrak/Pink_Eye/outputs/ddpm_v2/checkpoints
+  sample_dir: /users/PCS0229/imankhazrak/Pink_Eye/outputs/ddpm_v2/samples_during_train
+  sample_batch_size: 16
+  sample_grid_nrow: 4

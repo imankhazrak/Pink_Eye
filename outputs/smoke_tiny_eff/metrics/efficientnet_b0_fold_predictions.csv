@@ -1,0 +1,5 @@
+model,fold,filename,y_true,y_prob_pinkeye,y_pred
+efficientnet_b0,1,1 (10).jpg,1,0.50002521276474,1
+efficientnet_b0,1,2 (1).jpg,0,0.50002521276474,1
+efficientnet_b0,2,1 (1).jpg,1,0.4983004033565521,0
+efficientnet_b0,2,2 (10).jpg,0,0.4983004033565521,0

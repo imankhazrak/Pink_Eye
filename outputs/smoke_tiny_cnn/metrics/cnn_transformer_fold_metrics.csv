@@ -1,0 +1,3 @@
+model,fold,accuracy,balanced_accuracy,precision,recall,f1,roc_auc,precision_pinkeye,recall_pinkeye,f1_pinkeye,tn,fp,fn,tp
+cnn_transformer,1,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0,1,1,0
+cnn_transformer,2,0.5,0.5,0.5,1.0,0.6666666666666666,1.0,0.5,1.0,0.6666666666666666,0,1,0,1

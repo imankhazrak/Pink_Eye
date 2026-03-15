@@ -1,0 +1,25 @@
+seed: 42
+device: auto
+
+data:
+  image_size: 64
+
+model:
+  num_classes: 2
+  base_ch: 64
+  time_dim: 256
+
+diffusion:
+  timesteps: 1000
+  schedule: cosine
+
+checkpoint:
+  path: /users/PCS0229/imankhazrak/Pink_Eye/outputs/ddpm_v2/checkpoints/ddpm_epoch500.pt
+  state_key: ema_state_dict
+
+sample:
+  num_per_class: 200
+  batch_size: 16
+
+output:
+  dir: /users/PCS0229/imankhazrak/Pink_Eye/outputs/ddpm_v2/generated_200_per_class

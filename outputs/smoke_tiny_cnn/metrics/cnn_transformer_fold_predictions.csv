@@ -1,0 +1,5 @@
+model,fold,filename,y_true,y_prob_pinkeye,y_pred
+cnn_transformer,1,1 (10).jpg,1,0.49777787923812866,0
+cnn_transformer,1,2 (1).jpg,0,0.5479822158813477,1
+cnn_transformer,2,1 (1).jpg,1,0.7356328964233398,1
+cnn_transformer,2,2 (10).jpg,0,0.6635267734527588,1

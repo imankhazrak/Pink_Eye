@@ -1,0 +1,5 @@
+model,fold,filename,y_true,y_prob_pinkeye,y_pred
+resnet18,1,1 (10).jpg,1,0.5910474061965942,1
+resnet18,1,2 (1).jpg,0,0.5428609251976013,1
+resnet18,2,1 (1).jpg,1,0.40552759170532227,0
+resnet18,2,2 (10).jpg,0,0.39889276027679443,0
