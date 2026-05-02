@@ -49,7 +49,7 @@ TEST_RATIO = 0.15
 # Default baseline detector.  Change to "yolov8s.pt" for comparison.
 #   yolov8n.pt  –  nano   (baseline, fast, lower capacity)
 #   yolov8s.pt  –  small  (comparison, more capacity)
-YOLO_MODEL = "yolov8n.pt"
+YOLO_MODEL = str(PROJECT_ROOT / "models" / "yolo" / "yolov8n.pt")
 
 # ── Detection settings ────────────────────────────────────────────────────────
 DETECTION_CLASS_ID = 0

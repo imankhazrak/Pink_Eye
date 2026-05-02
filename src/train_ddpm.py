@@ -40,6 +40,7 @@ def main() -> None:
     dataset = EyeCropsDataset(
         root_dir=cfg["data"]["root_dir"],
         image_size=cfg["data"]["image_size"],
+        class_dirs=cfg["data"].get("class_dirs"),
     )
     loader = DataLoader(
         dataset,

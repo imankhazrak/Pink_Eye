@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pinkeye Detection Report: Eye Detection, Classification, and DDPM-Based Synthetic Augmentation</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 1100px; margin: 32px auto; padding: 0 16px; color: #111; }
+    h1, h2, h3, h4 { line-height: 1.25; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; vertical-align: top; }
+    img { max-width: 100%; height: auto; }
+    code { background: #f5f5f5; padding: 1px 4px; border-radius: 4px; }
+    ul { margin-top: 6px; }
+  </style>
+</head>
+<body>
+<h1 id="pinkeye-detection-report-eye-detection-classification-and-ddpm-based-synthetic-augmentation">Pinkeye Detection Report: Eye Detection, Classification, and DDPM-Based Synthetic Augmentation</h1>
+<p>This report summarizes the end-to-end pinkeye pipeline, including eye detection (Step 1), classification benchmarking and augmentation analysis (Step 2), and the current DDPM-based synthetic image generation status for healthy and pink-eye classes.</p>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#1-executive-summary">1. Executive Summary</a></li>
+<li><a href="#2-step-1-eye-localization-yolov8">2. Step 1: Eye Localization (YOLOv8)</a></li>
+<li><a href="#21-data-and-setup">2.1. Data and setup</a></li>
+<li><a href="#22-detector-performance">2.2. Detector performance</a></li>
+<li><a href="#23-classification-dataset-detection-pass">2.3. Classification Dataset Detection Pass</a></li>
+<li><a href="#3-step-2-classification-benchmark-5-fold-stratified-cv">3. Step 2: Classification Benchmark (5-Fold Stratified CV)</a></li>
+<li><a href="#31-dataset">3.1. Dataset</a></li>
+<li><a href="#32-protocol">3.2. Protocol</a></li>
+<li><a href="#33-baseline-model-comparison-mean--std">3.3. Baseline model comparison (mean +/- std)</a></li>
+<li><a href="#4-augmentation-experiments-and-insights">4. Augmentation Experiments and Insights</a></li>
+<li><a href="#41-a-with_aug-vs-no_color_aug">4.1. A) with_aug vs no_color_aug</a></li>
+<li><a href="#42-b-gaussian-noise-ablation-fliprotation-only">4.2. B) Gaussian-noise ablation (flip+rotation only)</a></li>
+<li><a href="#43-c-minority-only-augmentation-pink_eye-only">4.3. C) Minority-only augmentation (pink_eye only)</a></li>
+<li><a href="#5-overall-technical-conclusions">5. Overall Technical Conclusions</a></li>
+<li><a href="#6-ddpm-based-synthetic-data-augmentation-current-status">6. DDPM-Based Synthetic Data Augmentation (Current Status)</a></li>
+<li><a href="#61-data-sharing-status">6.1. Data sharing status</a></li>
+<li><a href="#62-ddpm-model-configurations">6.2. DDPM model configurations</a></li>
+<li><a href="#63-original-vs-synthetic-images">6.3. Original vs. Synthetic Images</a></li>
+<li><a href="#64-current-and-planned-usage">6.4. Current and planned usage</a></li>
+<li><a href="#65-goal">6.5. Goal</a></li>
+<li><a href="#7-support-needed-synthetic-data-curation">7. Support Needed: Synthetic Data Curation</a></li>
+<li><a href="#71-reason">7.1. Reason</a></li>
+<li><a href="#72-requested-support">7.2. Requested support</a></li>
+<li><a href="#73-expected-impact">7.3. Expected impact</a></li>
+</ul>
+<p>Project: Cattle Pinkeye Detection<br />
+Prepared for: Team update<br />
+Date: March 2026</p>
+<h2 id="1-executive-summary">1. Executive Summary</h2>
+<p>The project progressed from robust eye localization (Step 1) to multi-model disease classification on cropped eye regions (Step 2), followed by DDPM-based synthetic data generation.</p>
+<p>Main outcomes:</p>
+<ul>
+<li>Step 1 eye detector achieved mAP50 = 0.995 on validation.</li>
+<li>On the Step 2 baseline benchmark (5-fold CV), Strong CNN+Transformer had the best overall F1/accuracy balance.</li>
+<li>Across augmentation ablations, ResNet18 became the most stable top performer under constrained augmentation settings.</li>
+</ul>
+<table>
+  <tr>
+    <td align="center">
+      <img src="../runs/detect/predict3/1 (22).jpg" alt="Eye detected by the model" style="width: 420px; height: 320px; object-fit: cover;" />
+    </td>
+    <td align="center">
+      <img src="../outputs/eye_crops_classification/pink_eye/1 (22).jpg" alt="Cropped by the model" style="width: 420px; height: 320px; object-fit: cover;" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center">Eye detected by the model</td>
+    <td align="center">Cropped by the model</td>
+  </tr>
+</table>
+
+<ul>
+<li>The eye-only approach shows strong feasibility for pinkeye screening, with model choice and augmentation policy materially affecting minority-class performance.</li>
+</ul>
+<h2 id="2-step-1-eye-localization-yolov8">2. Step 1: Eye Localization (YOLOv8)</h2>
+<h3 id="21-data-and-setup">2.1. Data and setup</h3>
+<ul>
+<li>Eye dataset for annotation: 117 images, single class (eye).</li>
+<li>Annotation validation: 117/117 valid, no errors.</li>
+<li>Split: train/val/test = 93 / 11 / 13.</li>
+</ul>
+<h3 id="22-detector-performance">2.2. Detector performance</h3>
+<ul>
+<li>Precision: 1.000</li>
+<li>Recall: 0.999</li>
+<li>mAP50: 0.995</li>
+<li>mAP50-95: 0.631</li>
+</ul>
+<h3 id="23-classification-dataset-detection-pass">2.3. Classification Dataset Detection Pass</h3>
+<ul>
+<li>Sample classification pool (<code>data/sample_test</code>): 408 images</li>
+<li>Images with eye detections: 394</li>
+<li>No detections: 14 (copied for manual review)</li>
+</ul>
+<p>Conclusion: detector quality is strong enough to support the classification stage.</p>
+<h2 id="3-step-2-classification-benchmark-5-fold-stratified-cv">3. Step 2: Classification Benchmark (5-Fold Stratified CV)</h2>
+<h3 id="31-dataset">3.1. Dataset</h3>
+<ul>
+<li>Cropped-eye dataset: 394 images</li>
+<li>Healthy: 309</li>
+<li>Pink-eye: 85</li>
+</ul>
+<h3 id="32-protocol">3.2. Protocol</h3>
+<ul>
+<li>5-fold stratified CV</li>
+<li>5 epochs per fold</li>
+<li>Weighted cross-entropy for imbalance handling</li>
+<li>Early stopping enabled</li>
+</ul>
+<h3 id="33-baseline-model-comparison-mean-std">3.3. Baseline model comparison (mean +/- std)</h3>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th align="right">Accuracy</th>
+<th align="right">Balanced Acc</th>
+<th align="right">F1-score</th>
+<th align="right">ROC-AUC</th>
+<th align="right">Recall_pinkeye</th>
+<th align="right">F1_pinkeye</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ResNet18</td>
+<td align="right">0.9569 +/- 0.0144</td>
+<td align="right">0.9342 +/- 0.0289</td>
+<td align="right">0.8992 +/- 0.0342</td>
+<td align="right">0.9867 +/- 0.0117</td>
+<td align="right">0.8941 +/- 0.0644</td>
+<td align="right">0.8992 +/- 0.0342</td>
+</tr>
+<tr>
+<td>EfficientNet-B0</td>
+<td align="right">0.9568 +/- 0.0114</td>
+<td align="right">0.9383 +/- 0.0297</td>
+<td align="right">0.9000 +/- 0.0279</td>
+<td align="right">0.9829 +/- 0.0122</td>
+<td align="right">0.9059 +/- 0.0671</td>
+<td align="right">0.9000 +/- 0.0279</td>
+</tr>
+<tr>
+<td>CNN+Transformer</td>
+<td align="right">0.9239 +/- 0.0235</td>
+<td align="right">0.9132 +/- 0.0215</td>
+<td align="right">0.8369 +/- 0.0429</td>
+<td align="right">0.9681 +/- 0.0327</td>
+<td align="right">0.8941 +/- 0.0492</td>
+<td align="right">0.8369 +/- 0.0429</td>
+</tr>
+<tr>
+<td>Strong CNN+Transformer</td>
+<td align="right">0.9594 +/- 0.0106</td>
+<td align="right">0.9358 +/- 0.0229</td>
+<td align="right">0.9051 +/- 0.0214</td>
+<td align="right">0.9850 +/- 0.0024</td>
+<td align="right">0.8941 +/- 0.0644</td>
+<td align="right">0.9051 +/- 0.0214</td>
+</tr>
+</tbody>
+</table>
+<p>Key readout:</p>
+<ul>
+<li>Best overall benchmark model: Strong CNN+Transformer</li>
+<li>Best pink-eye recall in this run: EfficientNet-B0</li>
+</ul>
+<h2 id="4-augmentation-experiments-and-insights">4. Augmentation Experiments and Insights</h2>
+<h3 id="41-a-with_aug-vs-no_color_aug">4.1. A) with_aug vs no_color_aug</h3>
+<p>No-color setup used only flip + rotation + small Gaussian noise (no color jitter/affine).</p>
+<p>Most important deltas (<code>no_color_aug - with_aug</code>):</p>
+<ul>
+<li>ResNet18: improved</li>
+<li>Delta F1_pinkeye: +0.0198</li>
+<li>Delta Accuracy: +0.0076</li>
+<li>EfficientNet-B0: decreased</li>
+<li>Delta F1_pinkeye: -0.0279</li>
+<li>Strong CNN+Transformer: decreased</li>
+<li>Delta F1_pinkeye: -0.0379</li>
+</ul>
+<p>Interpretation: color/affine augmentations appear beneficial for non-ResNet models in this dataset, while ResNet18 benefited from a simpler augmentation policy.</p>
+<h3 id="42-b-gaussian-noise-ablation-fliprotation-only">4.2. B) Gaussian-noise ablation (flip+rotation only)</h3>
+<p>Comparing flip+rotation to no_color_aug (which included Gaussian noise):</p>
+<ul>
+<li>ResNet18: F1_pinkeye decreased (-0.0210)</li>
+<li>EfficientNet-B0: F1_pinkeye decreased (-0.0202)</li>
+<li>Strong CNN+Transformer: F1_pinkeye increased (+0.0117)</li>
+</ul>
+<p>Interpretation: Gaussian noise acted as useful regularization for CNN baselines but hurt the strong hybrid model.</p>
+<h3 id="43-c-minority-only-augmentation-pink_eye-only">4.3. C) Minority-only augmentation (pink_eye only)</h3>
+<p>Applying flip+rotation only to minority class:</p>
+<ul>
+<li>Best in this setting: ResNet18 (F1_pinkeye 0.9060 +/- 0.0282)</li>
+<li>Did not outperform each model's best previous setting overall.</li>
+</ul>
+<p>Interpretation: minority-only augmentation alone was not a universal improvement.</p>
+<h2 id="5-overall-technical-conclusions">5. Overall Technical Conclusions</h2>
+<ul>
+<li>Eye-crop classification is viable: strong metrics across multiple architectures confirm informative signal exists in eye region.</li>
+<li>Model ranking depends on augmentation regime:</li>
+<li>Baseline benchmark winner: Strong CNN+Transformer</li>
+<li>Most robust under constrained/controlled augmentations: ResNet18</li>
+<li>Class imbalance handling is effective: weighted CE + stratified CV produced stable minority-class recall/F1.</li>
+<li>Augmentation policy is a first-order factor: small transform changes materially shift F1_pinkeye.</li>
+</ul>
+<h2 id="6-ddpm-based-synthetic-data-augmentation-current-status">6. DDPM-Based Synthetic Data Augmentation (Current Status)</h2>
+<p>We have generated DDPM class-conditional synthetic eye images for both classes (<code>healthy</code> and <code>pink_eye</code>) for augmentation experiments.</p>
+<h3 id="61-data-sharing-status">6.1. Data sharing status</h3>
+<ul>
+<li>Original cropped eye images and generated synthetic images have been uploaded to OneDrive.</li>
+<li>Upload includes both classes (<code>healthy</code> and <code>pink_eye</code>) for side-by-side review and curation.</li>
+</ul>
+<h3 id="62-ddpm-model-configurations">6.2. DDPM model configurations</h3>
+<ul>
+<li>Batch size: 16</li>
+<li>Number of timesteps: 10k</li>
+<li>Number of epochs: 2048</li>
+</ul>
+<h3 id="63-original-vs-synthetic-images">6.3. Original vs. Synthetic Images</h3>
+<ul>
+<li>Healthy Images</li>
+</ul>
+<table>
+  <tr>
+    <td align="center">
+      <img src="../outputs/eye_crops_classification/healthy/2 (24).jpg" alt="Original healthy image" style="width: 420px; height: 320px; object-fit: cover;" />
+    </td>
+    <td align="center">
+      <img src="../outputs/ddpm/2. Generated_healthy_clean_42_43_44_45_46_47_48_49/healthy_synthetic (1).png" alt="Synthetic healthy image" style="width: 420px; height: 320px; object-fit: cover;" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center">Original</td>
+    <td align="center">Synthetic</td>
+  </tr>
+</table>
+
+<ul>
+<li>Pink-Eye Images</li>
+</ul>
+<table>
+  <tr>
+    <td align="center">
+      <img src="../outputs/eye_crops_classification/pink_eye/1 (22).jpg" alt="Original pink-eye image" style="width: 420px; height: 320px; object-fit: cover;" />
+    </td>
+    <td align="center">
+      <img src="../outputs/ddpm/1. Generated_pink_clean_42_43_44_45_46_47_48_49_50/generated_pink (160).png" alt="Synthetic pink-eye image" style="width: 420px; height: 320px; object-fit: cover;" />
+    </td>
+  </tr>
+  <tr>
+    <td align="center">Original</td>
+    <td align="center">Synthetic</td>
+  </tr>
+</table>
+
+<h3 id="64-current-and-planned-usage">6.4. Current and planned usage</h3>
+<ul>
+<li>Generate synthetic images under controlled quality checks.</li>
+<li>Add selected synthetic samples to training folds in a controlled manner.</li>
+<li>Re-run the Step 2 classifier benchmarks and compare against real-only training.</li>
+<li>Report impact on minority-class metrics, especially <code>Recall_pinkeye</code> and <code>F1_pinkeye</code>.</li>
+</ul>
+<h3 id="65-goal">6.5. Goal</h3>
+<ul>
+<li>Improve robustness and class balance by augmenting limited real pink-eye samples with high-quality synthetic data.</li>
+</ul>
+<h2 id="7-support-needed-synthetic-data-curation">7. Support Needed: Synthetic Data Curation</h2>
+<p>After synthetic images are generated, support is needed for a data-curation pass before using them in model training.</p>
+<h3 id="71-reason">7.1. Reason</h3>
+<ul>
+<li>The generated samples are not expected to be 100% correct.</li>
+<li>Some images may contain visual artifacts, unrealistic anatomy, or incorrect class appearance.</li>
+</ul>
+<h3 id="72-requested-support">7.2. Requested support</h3>
+<ul>
+<li>Help review synthetic image batches and remove low-quality/incorrect samples.</li>
+<li>Help maintain a cleaned subset of synthetic data for training experiments.</li>
+<li>Optionally define a simple curation rubric to keep filtering consistent across reviewers.</li>
+</ul>
+<h3 id="73-expected-impact">7.3. Expected impact</h3>
+<ul>
+<li>Higher quality augmented dataset.</li>
+<li>Lower risk of introducing noisy labels or harmful artifacts into classifier training.</li>
+<li>More reliable benchmark comparisons after augmentation.</li>
+</ul>
+</body>
+</html>

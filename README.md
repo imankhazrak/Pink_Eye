@@ -164,9 +164,9 @@ outputs/eye_crops_classification/
 ### Run training
 
 ```bash
-python train.py --model resnet18
-python train.py --model efficientnet --loss-type focal --use-weighted-sampler
-python train.py --model cnn_transformer --epochs 40 --batch-size 12
+python -m src.training.train_step2 --model resnet18
+python -m src.training.train_step2 --model efficientnet --loss-type focal --use-weighted-sampler
+python -m src.training.train_step2 --model cnn_transformer --epochs 40 --batch-size 12
 ```
 
 ### Key options

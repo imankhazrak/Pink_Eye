@@ -43,10 +43,20 @@ class DDPM(nn.Module):
             "sqrt_one_minus_alphas_cumprod",
             torch.sqrt(1.0 - alphas_cumprod),
         )
+        self.register_buffer("sqrt_recip_alphas_cumprod", torch.sqrt(1.0 / alphas_cumprod))
         posterior_variance = (
             betas * (1.0 - alphas_cumprod_prev) / (1.0 - alphas_cumprod + 1e-20)
         )
         self.register_buffer("posterior_variance", posterior_variance)
+        # Coefficients for q(x_{t-1} | x_t, x_0) posterior mean.
+        self.register_buffer(
+            "posterior_mean_coef1",
+            betas * torch.sqrt(alphas_cumprod_prev) / (1.0 - alphas_cumprod + 1e-20),
+        )
+        self.register_buffer(
+            "posterior_mean_coef2",
+            (1.0 - alphas_cumprod_prev) * torch.sqrt(alphas) / (1.0 - alphas_cumprod + 1e-20),
+        )
 
     def q_sample(
         self,
@@ -69,14 +79,20 @@ class DDPM(nn.Module):
 
     @torch.no_grad()
     def p_sample(self, x: torch.Tensor, t: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
-        betas_t = self.betas[t][:, None, None, None]
         sqrt_one_minus_alpha_cumprod_t = self.sqrt_one_minus_alphas_cumprod[t][:, None, None, None]
-        sqrt_recip_alpha_t = (1.0 / torch.sqrt(self.alphas[t]))[:, None, None, None]
 
         noise_pred = self.model(x, t.float(), y)
 
-        model_mean = sqrt_recip_alpha_t * (
-            x - betas_t * noise_pred / (sqrt_one_minus_alpha_cumprod_t + 1e-8)
+        # Predict x_0 first, then use posterior mean q(x_{t-1}|x_t,x_0) for better stability.
+        # x0 reconstruction must use cumulative alpha at timestep t.
+        x0_pred = (
+            x - sqrt_one_minus_alpha_cumprod_t * noise_pred
+        ) * self.sqrt_recip_alphas_cumprod[t][:, None, None, None]
+        x0_pred = torch.clamp(x0_pred, -1.0, 1.0)
+
+        model_mean = (
+            self.posterior_mean_coef1[t][:, None, None, None] * x0_pred
+            + self.posterior_mean_coef2[t][:, None, None, None] * x
         )
 
         if (t == 0).all():

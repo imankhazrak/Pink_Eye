@@ -3,7 +3,10 @@ device: auto
 
 data:
   root_dir: /users/PCS0229/imankhazrak/Pink_Eye/outputs/eye_crops_classification
-  image_size: 64
+  image_size: 128
+  class_dirs:
+    healthy: healthy_clean
+    pink_eye: pink_eye_clean
 
 model:
   num_classes: 2
@@ -15,7 +18,7 @@ diffusion:
   schedule: cosine
 
 train:
-  epochs: 500
+  epochs: 2048
   batch_size: 16
   lr: 0.0002
   weight_decay: 0.0

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Tuple
+from typing import Dict, List, Tuple
 
 from PIL import Image
 import torch
@@ -23,12 +23,20 @@ IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".bmp", ".webp", ".tif", ".tiff"}
 class EyeCropsDataset(Dataset):
     """Loads class-labeled eye crops for diffusion training."""
 
-    def __init__(self, root_dir: str | Path, image_size: int = 64, augment: bool = True) -> None:
+    def __init__(
+        self,
+        root_dir: str | Path,
+        image_size: int = 64,
+        augment: bool = True,
+        class_dirs: Dict[str, str] | None = None,
+    ) -> None:
         self.root_dir = Path(root_dir)
         self.samples: List[Tuple[Path, int]] = []
+        class_dirs = class_dirs or {}
 
         for class_name, label in CLASS_TO_IDX.items():
-            class_dir = self.root_dir / class_name
+            class_dir_name = class_dirs.get(class_name, class_name)
+            class_dir = self.root_dir / class_dir_name
             if not class_dir.exists():
                 continue
             for img_path in sorted(class_dir.glob("*")):

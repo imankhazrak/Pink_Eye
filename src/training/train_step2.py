@@ -102,7 +102,7 @@ def main() -> None:
     args = parse_args()
     config = build_config(args)
 
-    project_root = Path(__file__).resolve().parent
+    project_root = Path(__file__).resolve().parents[2]
     output_dirs = config.resolve_paths(project_root=project_root)
     set_global_seed(config.random_seed)
 

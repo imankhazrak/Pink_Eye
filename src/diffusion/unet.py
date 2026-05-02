@@ -55,9 +55,9 @@ class ResBlock(nn.Module):
         h = self.norm1(x)
         h = F.silu(h)
         h = self.conv1(h)
-        h = h + self.time_mlp(F.silu(t_emb))[:, :, None, None]
+        h = h + self.time_mlp(t_emb)[:, :, None, None]
         if self.class_mlp is not None and c_emb is not None:
-            h = h + self.class_mlp(F.silu(c_emb))[:, :, None, None]
+            h = h + self.class_mlp(c_emb)[:, :, None, None]
         h = self.norm2(h)
         h = F.silu(h)
         h = self.conv2(h)
@@ -154,8 +154,6 @@ class ConditionalUNet(nn.Module):
 
         self.out_norm = nn.GroupNorm(8, ch)
         self.out_conv = nn.Conv2d(ch, out_channels, 3, padding=1)
-        nn.init.zeros_(self.out_conv.weight)
-        nn.init.zeros_(self.out_conv.bias)
 
     def forward(self, x: torch.Tensor, t: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         t_emb = self.time_embed(t)

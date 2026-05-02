@@ -63,10 +63,13 @@ logs/
 # SLURM
 *.slurm
 
-# Outputs
-/outputs/eye_crops_pred/
-/outputs/eye_crops_classification/
-/outputs/metadata
+
+/outputs
+# /outputs/eye_crops_pred/
+# /outputs/eye_crops_classification/
+# /outputs/metadata
+/Archive/
+/DDPM_IMAN
 
 # Environment variables
 .env
