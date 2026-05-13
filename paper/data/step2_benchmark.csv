@@ -1,0 +1,5 @@
+model,accuracy_mean,accuracy_std,bal_acc_mean,bal_acc_std,f1_pinkeye_mean,f1_pinkeye_std,roc_auc_mean,roc_auc_std
+ResNet18,0.9569,0.0144,0.9342,0.0289,0.8992,0.0342,0.9867,0.0117
+EfficientNet-B0,0.9568,0.0114,0.9383,0.0297,0.9000,0.0279,0.9829,0.0122
+CNN+Transformer,0.9239,0.0235,0.9132,0.0215,0.8369,0.0429,0.9681,0.0327
+Strong CNN+Transformer,0.9594,0.0106,0.9358,0.0229,0.9051,0.0214,0.9850,0.0024

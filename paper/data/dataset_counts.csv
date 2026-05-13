@@ -1,0 +1,4 @@
+# Stage 2 eye-crop folder counts (from project reports; total must be 394).
+class_name,class_label,n_images
+healthy,0,309
+pink_eye,1,85

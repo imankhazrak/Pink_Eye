@@ -1,0 +1,121 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand\HyField@AuxAddToFields[1]{}
+\providecommand\HyField@AuxAddToCoFields[2]{}
+\citation{roboflow_eye}
+\citation{advisor_summary}
+\citation{ultralytics2023yolov8}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Methodology}{1}{section.1}\protected@file@percent }
+\newlabel{sec:methodology}{{1}{1}{Methodology}{section.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.1}Overview of the Pipeline}{1}{subsection.1.1}\protected@file@percent }
+\newlabel{subsec:overview}{{1.1}{1}{Overview of the Pipeline}{subsection.1.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.2}Dataset}{1}{subsection.1.2}\protected@file@percent }
+\newlabel{subsec:dataset}{{1.2}{1}{Dataset}{subsection.1.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.2.1}Eye Detection Dataset (Stage\nobreakspace  {}1)}{1}{subsubsection.1.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.2.2}Classification Dataset (Stage\nobreakspace  {}2)}{1}{subsubsection.1.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.3}Stage\nobreakspace  {}1: Eye Localisation with YOLOv8}{1}{subsection.1.3}\protected@file@percent }
+\newlabel{subsec:stage1}{{1.3}{1}{Stage~1: Eye Localisation with YOLOv8}{subsection.1.3}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.3.1}Annotation Validation}{1}{subsubsection.1.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.3.2}Detector Training}{1}{subsubsection.1.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces YOLOv8n Training Hyperparameters (Stage\nobreakspace  {}1)}}{1}{table.1}\protected@file@percent }
+\newlabel{tab:yolo_config}{{1}{1}{YOLOv8n Training Hyperparameters (Stage~1)}{table.1}{}}
+\citation{he2016resnet}
+\citation{tan2019efficientnet}
+\citation{rw2019timm}
+\citation{loshchilov2018adamw}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces High-level two-stage pipeline: localise the eye, then classify disease from the cropped region.}}{2}{figure.1}\protected@file@percent }
+\newlabel{fig:pipeline}{{1}{2}{High-level two-stage pipeline: localise the eye, then classify disease from the cropped region}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.3.3}Eye Cropping}{2}{subsubsection.1.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.4}Stage\nobreakspace  {}2: Classification Models}{2}{subsection.1.4}\protected@file@percent }
+\newlabel{subsec:stage2}{{1.4}{2}{Stage~2: Classification Models}{subsection.1.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.4.1}ResNet18 Baseline}{2}{subsubsection.1.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.4.2}EfficientNet-B0 Baseline}{2}{subsubsection.1.4.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Qualitative example of Stage\nobreakspace  {}1 localisation after fine-tuning: (a)\nobreakspace  {}predicted eye region on a cattle head image; (b)\nobreakspace  {}cropped eye with padding, resized to $224\times 224$ before Stage\nobreakspace  {}2.}}{2}{figure.2}\protected@file@percent }
+\newlabel{fig:yolo_stage1_example}{{2}{2}{Qualitative example of Stage~1 localisation after fine-tuning: (a)~predicted eye region on a cattle head image; (b)~cropped eye with padding, resized to $224\times 224$ before Stage~2}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.4.3}Baseline CNN+Transformer Hybrid}{2}{subsubsection.1.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.4.4}Strong CNN+Transformer}{2}{subsubsection.1.4.4}\protected@file@percent }
+\newlabel{subsubsec:strong}{{1.4.4}{2}{Strong CNN+Transformer}{subsubsection.1.4.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Strong CNN+Transformer Architectural Hyperparameters}}{2}{table.2}\protected@file@percent }
+\newlabel{tab:strong_config}{{2}{2}{Strong CNN+Transformer Architectural Hyperparameters}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.5}Training Protocol}{2}{subsection.1.5}\protected@file@percent }
+\newlabel{subsec:training}{{1.5}{2}{Training Protocol}{subsection.1.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.5.1}Stratified 5-Fold Cross-Validation}{2}{subsubsection.1.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.5.2}Loss Function and Class Imbalance}{2}{subsubsection.1.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.5.3}Optimiser and Early Stopping}{2}{subsubsection.1.5.3}\protected@file@percent }
+\citation{rw2019timm}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.5.4}Cluster Benchmark and Ablation Protocol}{3}{subsubsection.1.5.4}\protected@file@percent }
+\newlabel{subsubsec:cluster_benchmark_protocol}{{1.5.4}{3}{Cluster Benchmark and Ablation Protocol}{subsubsection.1.5.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {1.5.5}Augmentation Policies (Reported Experiments)}{3}{subsubsection.1.5.5}\protected@file@percent }
+\newlabel{subsubsec:aug_policies}{{1.5.5}{3}{Augmentation Policies (Reported Experiments)}{subsubsection.1.5.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{\numberline {1.5.5.1}Reproducibility note}{3}{paragraph.1.5.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.6}Evaluation Metrics}{3}{subsection.1.6}\protected@file@percent }
+\newlabel{subsec:metrics}{{1.6}{3}{Evaluation Metrics}{subsection.1.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {1.7}Ablation Experiment Design}{3}{subsection.1.7}\protected@file@percent }
+\newlabel{subsec:ablation}{{1.7}{3}{Ablation Experiment Design}{subsection.1.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Results}{3}{section.2}\protected@file@percent }
+\newlabel{sec:results}{{2}{3}{Results}{section.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}Dataset Distribution}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}Main Classification Benchmark}{3}{subsection.2.2}\protected@file@percent }
+\newlabel{subsec:main_benchmark}{{2.2}{3}{Main Classification Benchmark}{subsection.2.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Class distribution of usable Stage\nobreakspace  {}2 eye crops ($n{=}394$): 309 healthy (78.4\,\%) and 85 pinkeye (21.6\,\%), matching folder labels after YOLO cropping.}}{3}{figure.3}\protected@file@percent }
+\newlabel{fig:dataset_dist}{{3}{3}{Class distribution of usable Stage~2 eye crops ($n{=}394$): 309 healthy (78.4\,\%) and 85 pinkeye (21.6\,\%), matching folder labels after YOLO cropping}{figure.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Mean$\,\pm \,$std F1$_{\mathrm  {PE}}$ under full augmentation, replotted from the same statistics as Table\nobreakspace  {}\ref  {tab:benchmark}.}}{3}{figure.4}\protected@file@percent }
+\newlabel{fig:f1bar}{{4}{3}{Mean$\,\pm \,$std F1$_{\mathrm {PE}}$ under full augmentation, replotted from the same statistics as Table~\ref {tab:benchmark}}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}Fold-Level Behaviour and Confusion Matrix}{3}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}Augmentation Comparisons}{3}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.1}Removing Colour Augmentation}{3}{subsubsection.2.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.2}Gaussian Noise Ablation}{3}{subsubsection.2.4.2}\protected@file@percent }
+\citation{ho2020ddpm}
+\citation{selvaraju2017gradcam}
+\citation{ho2020ddpm}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Stage\nobreakspace  {}2 classification under full augmentation (5-fold mean$\,\pm \,$std). Best per column in bold.}}{4}{table.3}\protected@file@percent }
+\newlabel{tab:benchmark}{{3}{4}{Stage~2 classification under full augmentation (5-fold mean$\,\pm \,$std). Best per column in bold}{table.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Per-fold accuracy and F1$_{\mathrm  {PE}}$ (full augmentation).}}{4}{table.4}\protected@file@percent }
+\newlabel{tab:per_fold}{{4}{4}{Per-fold accuracy and F1$_{\mathrm {PE}}$ (full augmentation)}{table.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Aggregated confusion matrix for Strong CNN+Transformer (sum over validation folds; total samples $=394$).}}{4}{table.5}\protected@file@percent }
+\newlabel{tab:confusion}{{5}{4}{Aggregated confusion matrix for Strong CNN+Transformer (sum over validation folds; total samples $=394$)}{table.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.3}Minority-Only Augmentation}{4}{subsubsection.2.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.4.4}Best Model per Configuration}{4}{subsubsection.2.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.5}DDPM-Based Synthetic Augmentation (Pilot)}{4}{subsection.2.5}\protected@file@percent }
+\newlabel{subsec:ddpm_pilot}{{2.5}{4}{DDPM-Based Synthetic Augmentation (Pilot)}{subsection.2.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Effect of removing colour-related augmentation: mean F1$_{\mathrm  {PE}}$ and accuracy (5-fold mean).}}{4}{table.6}\protected@file@percent }
+\newlabel{tab:no_color_delta}{{6}{4}{Effect of removing colour-related augmentation: mean F1$_{\mathrm {PE}}$ and accuracy (5-fold mean)}{table.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Gaussian noise ablation: mean F1$_{\mathrm  {PE}}$. $\Delta $ is flip+rotation (no noise) minus no-colour+noise.}}{4}{table.7}\protected@file@percent }
+\newlabel{tab:ablation_noise}{{7}{4}{Gaussian noise ablation: mean F1$_{\mathrm {PE}}$. $\Delta $ is flip+rotation (no noise) minus no-colour+noise}{table.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}Discussion}{4}{section.3}\protected@file@percent }
+\newlabel{sec:discussion}{{3}{4}{Discussion}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Architecture Rankings and Augmentation Interactions}{4}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Qualitative Attribution}{4}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Limitations and Future Work}{4}{subsection.3.3}\protected@file@percent }
+\bibstyle{IEEEtran}
+\bibcite{roboflow_eye}{1}
+\bibcite{advisor_summary}{2}
+\bibcite{he2016resnet}{3}
+\bibcite{tan2019efficientnet}{4}
+\bibcite{loshchilov2018adamw}{5}
+\bibcite{rw2019timm}{6}
+\bibcite{selvaraju2017gradcam}{7}
+\bibcite{ultralytics2023yolov8}{8}
+\bibcite{ho2020ddpm}{9}
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Minority-only versus all-class geometric augmentation (mean F1$_{\mathrm  {PE}}$).}}{5}{table.8}\protected@file@percent }
+\newlabel{tab:ablation_minority}{{8}{5}{Minority-only versus all-class geometric augmentation (mean F1$_{\mathrm {PE}}$)}{table.8}{}}
+\@writefile{toc}{\contentsline {section}{References}{5}{section*.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Best mean accuracy / F1$_{\mathrm  {PE}}$ by augmentation regime (5-fold means).}}{6}{table.9}\protected@file@percent }
+\newlabel{tab:full_comparison}{{9}{6}{Best mean accuracy / F1$_{\mathrm {PE}}$ by augmentation regime (5-fold means)}{table.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Qualitative comparison of real Stage\nobreakspace  {}2 crops and class-conditional DDPM samples (pilot augmentation study). Training used batch size\nobreakspace  {}16, $T{=}10{,}000$, and 2048\nobreakspace  {}epochs.}}{7}{figure.5}\protected@file@percent }
+\newlabel{fig:ddpm_qualitative}{{5}{7}{Qualitative comparison of real Stage~2 crops and class-conditional DDPM samples (pilot augmentation study). Training used batch size~16, $T{=}10{,}000$, and 2048~epochs}{figure.5}{}}
+\gdef \@abspage@last{7}

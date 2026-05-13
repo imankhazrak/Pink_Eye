@@ -1,5 +1,4 @@
 %% IEEE Double-Column Style
-%% Methodology and Results Section
 %% Cattle Pinkeye (Infectious Bovine Keratoconjunctivitis) Detection
 %% via a Two-Stage Deep Learning Pipeline
 
@@ -15,11 +14,10 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 \usepackage{float}
-\usepackage{subcaption}
-\usepackage{algorithm}
-\usepackage{algpseudocode}
 \usepackage{cite}
 \usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
 
 \hypersetup{
   colorlinks=true,
@@ -28,7 +26,6 @@
   urlcolor=blue
 }
 
-% Column-width helper
 \newcolumntype{C}[1]{>{\centering\arraybackslash}m{#1}}
 
 \begin{document}
@@ -39,13 +36,12 @@ Infectious Bovine Keratoconjunctivitis in Cattle}
 \author{%
   \IEEEauthorblockN{Iman Khazrak}\\
   \IEEEauthorblockA{Department of Computer Science\\
-    [University Name]\\
-    Email: imankhazrak@[university.edu]}
+    University Name\\
+    Email: \texttt{imankhazrak@university.edu}}
 }
 
 \maketitle
 
-%% ============================================================
 \begin{abstract}
 Infectious bovine keratoconjunctivitis (IBK), commonly known as pinkeye,
 is a highly contagious ocular disease in cattle that causes significant
@@ -53,17 +49,17 @@ welfare and economic losses. Early automated detection from farm images
 can enable timely veterinary intervention. We present a two-stage deep
 learning pipeline: \emph{Stage~1} localises the eye region using a
 YOLOv8 detector, and \emph{Stage~2} classifies the cropped eye as
-healthy or diseased using four architectures—ResNet18, EfficientNet-B0,
-a baseline CNN+Transformer hybrid, and a proposed enhanced
-CNN+Transformer model. Evaluated on a dataset of 394 labelled eye crops
-(309 healthy, 85 pink-eye) under stratified 5-fold cross-validation, the
-proposed \emph{Strong CNN+Transformer} achieves the highest accuracy
-(95.94\,\%), F1-score on the minority pinkeye class (90.51\,\%), and
-ROC-AUC (98.50\,\%). Comprehensive ablation studies isolate the
-contribution of each augmentation component. Our results demonstrate
-that combining convolutional local feature extraction with transformer
-global context modelling yields the most robust detector for this
-class-imbalanced, fine-grained medical imaging task.
+healthy or diseased using four architectures---ResNet18,
+EfficientNet-B0, a baseline CNN+Transformer hybrid, and an enhanced
+CNN+Transformer variant with a class token and deeper head.
+Evaluated on 394 labelled eye crops (309 healthy, 85 pinkeye) under
+stratified 5-fold cross-validation, the Strong CNN+Transformer achieves
+the highest mean accuracy (95.94\,\%) and the highest mean F1-score on
+the minority pinkeye class (90.51\,\%); ResNet18 attains the highest
+mean ROC-AUC (98.67\,\%) among the four models in the primary benchmark.
+Augmentation ablations show architecture-dependent gains and trade-offs.
+These results support eye-localised classification as a feasible screen
+for this imbalanced, fine-grained imaging setting.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -71,8 +67,6 @@ Pinkeye detection, YOLOv8, CNN+Transformer, class imbalance,
 data augmentation, cattle health monitoring, transfer learning.
 \end{IEEEkeywords}
 
-
-%% ============================================================
 \section{Methodology}
 \label{sec:methodology}
 
@@ -89,14 +83,37 @@ eye images to discriminate between healthy eyes and eyes affected by IBK.
 
 \begin{figure}[t]
   \centering
-  \includegraphics[width=\linewidth]{figures/pipeline_overview.pdf}
-  \caption{High-level overview of the two-stage pipeline. Stage~1
-    (YOLOv8) localises and crops the eye region; Stage~2
-    (classification models) predicts the disease label.}
+  \resizebox{0.92\linewidth}{!}{%
+  \begin{tikzpicture}[
+      font=\footnotesize,
+      node distance=4.5mm,
+      >=Latex,
+      box/.style={
+        rectangle,
+        draw,
+        rounded corners,
+        align=center,
+        minimum width=3.2cm,
+        minimum height=7mm,
+        inner sep=3pt
+      }
+    ]
+    \node[box] (img) {Cattle head image};
+    \node[box, below=of img] (det) {Stage 1: YOLOv8};
+    \node[box, below=of det] (crop) {Eye crop $224{\times}224$};
+    \node[box, below=of crop] (cls) {Stage 2: classifier};
+    \node[box, below=of cls] (out) {Healthy / pinkeye};
+    \draw[->, thick] (img) -- (det);
+    \draw[->, thick] (det) -- (crop);
+    \draw[->, thick] (crop) -- (cls);
+    \draw[->, thick] (cls) -- (out);
+  \end{tikzpicture}%
+  }
+  \caption{High-level two-stage pipeline: localise the eye, then classify
+    disease from the cropped region.}
   \label{fig:pipeline}
 \end{figure}
 
-% ----------------------------------------------------------------
 \subsection{Dataset}
 \label{subsec:dataset}
 
@@ -104,54 +121,33 @@ eye images to discriminate between healthy eyes and eyes affected by IBK.
 The YOLOv8 detector was trained on 117 cattle head images sourced from
 the Roboflow Eye Detection dataset (v3) \cite{roboflow_eye}. Each image
 carries a single bounding-box annotation for the \texttt{eye} class in
-YOLOv8 normalised format. All 117 annotation files were validated
-(correct pairing, well-formed coordinates, class~ID~=~0, no
-out-of-range values) prior to training. The dataset was split
-deterministically with a fixed random seed (42) into training (80\%,
-93 images), validation (10\%, 11 images), and test (10\%, 13 images)
-subsets.
+YOLO normalised format. All 117 annotation files were validated (pairing,
+coordinate ranges, class ID${}=0$) prior to training. The dataset was
+split deterministically with seed 42 into training (80\,\%, 93 images),
+validation (10\,\%, 11 images), and test (10\,\%, 13 images), using the
+same stratification rule as in the logged detector training run.
 
 \subsubsection{Classification Dataset (Stage~2)}
-The full classification dataset comprises 408 cattle head images carrying
-disease labels (healthy / pink\_eye). After running YOLOv8 inference and
-cropping, 394 images yielded valid eye crops; the remaining 14 produced
-no confident detection and were set aside for manual review. The final
-classification dataset therefore contains:
+The classification pool comprised 408 cattle head images with folder
+labels (healthy / pinkeye). After YOLO inference and cropping at
+confidence 0.25, 394 images yielded usable eye crops; 14 images had no
+passing detection and were set aside for manual review
+\cite{advisor_summary}. The Stage~2 dataset therefore contains 309 healthy
+and 85 pinkeye crops (78.4\,\% / 21.6\,\%). Images are resized to
+$224 \times 224$ for classification.
 
-\begin{itemize}
-  \item \textbf{Healthy (label~0):} 309 images (78.4\,\%)
-  \item \textbf{Pink-eye (label~1):} 85 images (21.6\,\%)
-\end{itemize}
-
-The class imbalance ratio of approximately 3.64:1 is explicitly handled
-by weighted cross-entropy loss and, in ablation experiments, by
-minority-only augmentation. All images were resized to
-$224 \times 224$ pixels before training.
-
-\begin{figure}[t]
-  \centering
-  \includegraphics[width=\linewidth]{figures/dataset_distribution.pdf}
-  \caption{Class distribution of the Stage~2 classification dataset
-    (394 images). The minority pink-eye class constitutes 21.6\,\% of
-    all samples.}
-  \label{fig:dataset_dist}
-\end{figure}
-
-% ----------------------------------------------------------------
 \subsection{Stage~1: Eye Localisation with YOLOv8}
 \label{subsec:stage1}
 
 \subsubsection{Annotation Validation}
-Prior to training, the Roboflow annotation set was audited by a custom
-validation script that checked image–label pairing, coordinate validity
-($x, y, w, h \in [0,1]$), and class identifier correctness. All 117
-files passed without errors or warnings.
+The Roboflow export was checked with a validation script (format,
+bounds, class ID). All 117 labels passed.
 
 \subsubsection{Detector Training}
-A YOLOv8-nano (YOLOv8n) architecture pretrained on MS-COCO was fine-tuned
-on the 93-image training split. Training used the Ultralytics 8.4.21
-framework (PyTorch 2.8.0, CUDA 12.8) on a Tesla V100-PCIE 16\,GB GPU.
-The full configuration is listed in Table~\ref{tab:yolo_config}.
+A YOLOv8n model pretrained on MS-COCO was fine-tuned on the 93-image
+training split using the Ultralytics YOLOv8 API \cite{ultralytics2023yolov8}.
+Hyperparameters match the logged training run in the project detector
+report (Table~\ref{tab:yolo_config}).
 
 \begin{table}[h]
   \caption{YOLOv8n Training Hyperparameters (Stage~1)}
@@ -165,7 +161,7 @@ The full configuration is listed in Table~\ref{tab:yolo_config}.
     Epochs            & 100 \\
     Image size        & $640 \times 640$ \\
     Batch size        & 16 \\
-    Optimizer         & AdamW (auto-tuned LR) \\
+    Optimizer         & AdamW (framework default LR schedule) \\
     Training images   & 93 \\
     Validation images & 11 \\
     Test images       & 13 \\
@@ -175,73 +171,61 @@ The full configuration is listed in Table~\ref{tab:yolo_config}.
 \end{table}
 
 \subsubsection{Eye Cropping}
-After training, the best-checkpoint detector was applied to all 408
-classification images using a confidence threshold of 0.25. For each
-detected bounding box the crop region was expanded by a 10\,\% symmetric
-padding (clamped to image boundaries) before extraction. The resulting
-crops represent the localised eye region that serves as input to Stage~2.
+The best detector checkpoint was applied to all 408 classification images
+with confidence threshold 0.25 and symmetric padding 10\,\% around each
+box (clamped to image bounds), matching the detector inference settings
+above (confidence 0.25, 10\,\% symmetric padding).
+Figure~\ref{fig:yolo_stage1_example} shows a representative head image
+from validation-style inference: the fine-tuned detector places a box on
+the eye with a class score, and the crop after padding is the
+resolution-matched input to Stage~2.
 
--------------------------------------------------------------
+\begin{figure}[t]
+  \centering
+  \begin{minipage}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/yolo_eye_detection.jpg}\\[3pt]
+    \footnotesize (a) Detection (bounding box and score)
+  \end{minipage}
+  \hfill
+  \begin{minipage}[b]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/yolo_eye_crop.jpg}\\[3pt]
+    \footnotesize (b) Eye crop fed to classification
+  \end{minipage}
+  \caption{Qualitative example of Stage~1 localisation after fine-tuning:
+    (a)~predicted eye region on a cattle head image; (b)~cropped eye with
+    padding, resized to $224\times 224$ before Stage~2.}
+  \label{fig:yolo_stage1_example}
+\end{figure}
+
 \subsection{Stage~2: Classification Models}
 \label{subsec:stage2}
 
 \subsubsection{ResNet18 Baseline}
-A ResNet18~\cite{he2016resnet} pretrained on ImageNet-1k was adapted for
-binary classification by replacing the final fully connected layer with a
-$512 \rightarrow 2$ linear head. All backbone weights were fine-tuned
-end-to-end.
+ResNet18~\cite{he2016resnet} with ImageNet-1k weights was adapted by
+replacing the final fully connected layer with a $512 \rightarrow 2$
+head and fine-tuning the full network.
 
 \subsubsection{EfficientNet-B0 Baseline}
-An EfficientNet-B0~\cite{tan2019efficientnet} pretrained on ImageNet-1k
-was adapted by replacing its classification head with a $1280 \rightarrow
-2$ linear layer. Fine-tuning was performed on all layers.
+EfficientNet-B0~\cite{tan2019efficientnet} with ImageNet-1k weights was
+adapted with a $1280 \rightarrow 2$ classifier head and end-to-end
+fine-tuning.
 
 \subsubsection{Baseline CNN+Transformer Hybrid}
-The baseline hybrid model connects a pretrained CNN backbone to a
-lightweight Transformer encoder. Feature maps from the final convolutional
-stage are projected via a $1 \times 1$ convolution, flattened into a
-sequence of patch tokens, and processed by a multi-head self-attention
-encoder. Global representation is obtained by mean pooling over all
-tokens, followed by a linear classification head. This design couples
-CNN local feature extraction with transformer relational reasoning.
+The baseline hybrid feeds final-stage CNN feature maps through a
+$1 \times 1$ projection, flattens spatial locations into tokens, applies
+a Transformer encoder, mean-pools tokens, and classifies with a linear
+head in our implementation.
 
-\subsubsection{Strong CNN+Transformer (Proposed)}
+\subsubsection{Strong CNN+Transformer}
 \label{subsubsec:strong}
-The proposed \emph{Strong CNN+Transformer} model is an enhanced version
-of the baseline hybrid. Its forward pass is:
-
-\begin{enumerate}
-  \item A pretrained EfficientNet-B0 backbone (features-only, last stage
-    output) extracts feature maps $\mathbf{F} \in
-    \mathbb{R}^{B \times C \times H \times W}$.
-  \item A $1 \times 1$ projection followed by BatchNorm and GELU maps
-    channels to embedding dimension $d$:
-    $\mathbf{F}' \in \mathbb{R}^{B \times d \times H \times W}$.
-  \item $\mathbf{F}'$ is flattened to patch tokens
-    $\mathbf{T} \in \mathbb{R}^{B \times HW \times d}$.
-  \item A learnable CLS token $\mathbf{c} \in \mathbb{R}^d$ is prepended,
-    and learnable positional embeddings $\mathbf{P} \in
-    \mathbb{R}^{(1+HW) \times d}$ are added:
-    \begin{equation}
-      \mathbf{T}' = \left[\mathbf{c}; \mathbf{T}\right] + \mathbf{P}.
-    \end{equation}
-  \item A $L$-layer Transformer encoder (pre-norm formulation,
-    multi-head attention with $h$ heads) processes $\mathbf{T}'$.
-  \item The CLS token output $\mathbf{z}_0$ is passed through a
-    multi-layer MLP head:
-    \begin{equation}
-      \hat{y} = W_2 \cdot \text{Dropout}\!\left(
-        \text{GELU}\!\left(W_1 \cdot \text{LayerNorm}(\mathbf{z}_0)
-        \right)\right)
-    \end{equation}
-    yielding logits over the two classes.
-\end{enumerate}
-
-Key architectural hyperparameters are listed in
-Table~\ref{tab:strong_config}. CLS-token aggregation provides a dedicated
-global representation, learnable positional embeddings preserve spatial
-structure, and the deeper MLP head offers additional discriminative
-capacity compared with the baseline hybrid.
+The Strong variant uses an EfficientNet-B0 backbone (features-only),
+$1 \times 1$ projection with BatchNorm and GELU, patch tokens with a
+learnable CLS token and learnable positional embeddings, a pre-norm
+Transformer encoder ($L{=}3$, $h{=}4$, $d{=}256$), and an MLP classification
+head on the CLS output \cite{rw2019timm}. Hyperparameters are summarised
+in Table~\ref{tab:strong_config}.
 
 \begin{table}[h]
   \caption{Strong CNN+Transformer Architectural Hyperparameters}
@@ -263,115 +247,106 @@ capacity compared with the baseline hybrid.
     \bottomrule
   \end{tabular}
 \end{table}
---------------------------------------------------------------
+
 \subsection{Training Protocol}
 \label{subsec:training}
 
-All Stage~2 models were trained and evaluated under the same protocol to
-ensure fair comparison.
-
 \subsubsection{Stratified 5-Fold Cross-Validation}
-Given the limited size of the dataset (394 images), a stratified 5-fold
-cross-validation scheme was adopted. Stratification preserves the
-78.4\,\%/21.6\,\% class ratio in every fold. In each iteration, 4 folds
-(315--316 images) are used for training and 1 fold (78--79 images) for
-validation. Final performance is reported as mean $\pm$ standard deviation
-over 5 folds.
+With 394 crops, we used stratified 5-fold cross-validation (seed 42),
+preserving the healthy/pink-eye ratio in each fold. Each fold uses four
+parts for training and one for validation; metrics are summarised as
+mean $\pm$ standard deviation across folds.
 
 \subsubsection{Loss Function and Class Imbalance}
-Weighted cross-entropy loss was used throughout. Class weights are
-computed as the inverse of class frequency:
-\begin{equation}
-  w_c = \frac{N}{K \cdot n_c},
-\end{equation}
-where $N$ is the total number of training samples, $K$ the number of
-classes, and $n_c$ the count of class $c$. The resulting weights
-($w_0 \approx 0.64$, $w_1 \approx 2.32$) upweight the minority
-pink-eye class at every gradient step.
+Training used weighted cross-entropy with class weights
+$w_c = N / (K n_c)$ over the \emph{training-fold} sample counts (inverse
+frequency within each fold). This upweights
+the minority pinkeye class relative to healthy samples.
 
-\subsubsection{Optimiser and Scheduler}
-The AdamW optimiser~\cite{loshchilov2018adamw} was used with learning
-rate $\eta = 10^{-4}$ and weight decay $\lambda = 10^{-4}$.
-Early stopping was applied with patience~$= 8$ epochs and minimum
-improvement threshold $\delta = 10^{-4}$ on validation F1-score
-(pink-eye class). The maximum number of epochs was set to 30.
+\subsubsection{Optimiser and Early Stopping}
+Optimisation used AdamW \cite{loshchilov2018adamw} with learning rate
+$10^{-4}$ and weight decay $10^{-4}$. Early stopping monitored validation
+F1 on the pinkeye class with patience 8 and minimum improvement
+$\delta = 10^{-4}$.
 
-\subsubsection{Data Augmentation}
-The primary (``with\_aug'') augmentation pipeline applied to the
-training set consists of:
-\begin{itemize}
-  \item Random resized crop to $224 \times 224$ (scale 0.8--1.0)
-  \item Horizontal flip ($p=0.5$)
-  \item Random rotation ($\pm 10^{\circ}$, $p=0.3$)
-  \item Colour jitter (brightness $\pm 0.2$, contrast $\pm 0.2$,
-    saturation $\pm 0.1$)
-  \item Random affine (translate $\pm 5\%$, shear $\pm 5^{\circ}$)
-\end{itemize}
-Validation and test images were only resized to $224 \times 224$ and
-normalised using ImageNet statistics
-($\mu = [0.485, 0.456, 0.406]$, $\sigma = [0.229, 0.224, 0.225]$).
+\subsubsection{Cluster Benchmark and Ablation Protocol}
+\label{subsubsec:cluster_benchmark_protocol}
+All Step~2 benchmarks and augmentation studies were run as batch GPU jobs
+on a shared cluster managed by the SLURM workload scheduler. Every study
+used the same stratified 5-fold split (seed~42), weighted cross-entropy,
+AdamW learning rate $10^{-4}$ (weight decay $10^{-4}$), batch size~8,
+early stopping on validation F1$_{\mathrm{PE}}$ with patience~8
+(minimum improvement $\delta{=}10^{-4}$), and CUDA acceleration with
+the centre's module stack. Training was capped at five epochs per fold
+unless stopped earlier by early stopping. Default settings used for ad hoc
+interactive runs may differ; all figures and tables in
+Section~\ref{sec:results} follow this cluster protocol.
 
-\subsubsection{Implementation Details}
-All experiments were run on a Tesla V100-PCIE 16\,GB GPU using
-PyTorch 2.8.0, CUDA 12.8, and the Timm library for pretrained
-backbones~\cite{rw2019timm}. Batch size was 8 for the
-benchmark run and ablation experiments. A global random seed of 42 was
-fixed for all random number generators (Python, NumPy, PyTorch, CUDA)
-to ensure reproducibility.
+\subsubsection{Augmentation Policies (Reported Experiments)}
+\label{subsubsec:aug_policies}
+Four training augmentations were compared. \textbf{(i)~Full augmentation}
+defines the primary benchmark: random resized crop, horizontal flip,
+rotation ($\pm 10^{\circ}$), colour jitter, and mild affine transforms,
+with validation and test limited to resize and ImageNet normalisation
+\cite{rw2019timm}. \textbf{(ii)~No-colour augmentation} retained flip,
+rotation, and light Gaussian noise but omitted colour jitter.
+\textbf{(iii)~Flip and rotation only} removed Gaussian noise relative to
+(ii). \textbf{(iv)~Minority-only flip and rotation} applied geometric
+augmentation only to pinkeye-labelled training crops.
 
-% ----------------------------------------------------------------
+\paragraph{Reproducibility note}
+The publicly released training code implements resize, horizontal flip,
+and rotation for training---a subset of (i)--(ii). The richer policies
+above correspond to the frozen experiment configuration used to produce
+Section~\ref{sec:results}; reproducing those runs exactly may require the
+same transform definitions and software versions as in the original study.
+
 \subsection{Evaluation Metrics}
 \label{subsec:metrics}
 
-Because the dataset is class-imbalanced, we report a comprehensive set
-of metrics computed on the validation fold at each cross-validation
-iteration:
+For each validation fold we report accuracy, balanced accuracy,
+precision/recall/F1 for the pinkeye (minority) class, and ROC-AUC
+(one-vs-rest using predicted pinkeye probability). The primary score
+for comparing augmentation settings is F1$_{\mathrm{PE}}$ (F1 on
+pinkeye).
 
-\begin{itemize}
-  \item \textbf{Accuracy:} fraction of correctly classified samples.
-  \item \textbf{Balanced Accuracy:} average per-class recall, mitigating
-    the effect of class imbalance.
-  \item \textbf{Precision / Recall / F1 (pink-eye):} computed specifically
-    for the minority class (label~1), which is the clinically relevant
-    detection target.
-  \item \textbf{ROC-AUC:} area under the receiver operating characteristic
-    curve.
-\end{itemize}
-
-The primary metric guiding model selection and ablation comparisons is
-\emph{F1-score on the pink-eye class} (F1\_pinkeye), as it captures the
-balance between false negatives (missed cases) and false positives
-(unnecessary interventions).
-
-% ----------------------------------------------------------------
-\subsection{Ablation Experiments}
+\subsection{Ablation Experiment Design}
 \label{subsec:ablation}
 
-To isolate the contribution of each augmentation component, four separate
-experimental configurations were run:
+We compared the four augmentation policies in
+Section~\ref{subsubsec:aug_policies} under the cluster benchmark protocol in
+Section~\ref{subsubsec:cluster_benchmark_protocol}, keeping the same folds, loss,
+and stopping rule within each compared study. Model sets varied slightly
+by experiment (all four models for configurations (i)--(ii); subsets for
+(iii)--(iv) as listed in the tables).
 
-\begin{enumerate}
-  \item \textbf{Baseline (with\_aug):} full augmentation pipeline
-    (Section~\ref{subsec:training}).
-  \item \textbf{No-colour augmentation:} horizontal flip, rotation
-    ($\pm 10^{\circ}$), and mild Gaussian noise ($\sigma \approx 0.01$,
-    $p = 0.1$); no colour jitter.
-  \item \textbf{Geometric-only (flip + rotation):} horizontal flip and
-    rotation only; Gaussian noise removed.
-  \item \textbf{Minority-only augmentation:} geometric augmentation
-    (flip + rotation) applied exclusively to pink-eye samples; healthy
-    samples receive only resize + normalise.
-\end{enumerate}
+\section{Results}
+\label{sec:results}
 
-Each configuration was evaluated with all models under the identical
-5-fold protocol described above.
+\subsection{Dataset Distribution}
+Figure~\ref{fig:dataset_dist} summarises the Stage~2 class counts used in
+all experiments.
 
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=0.82\linewidth]{figures/dataset_distribution.pdf}
+  \caption{Class distribution of usable Stage~2 eye crops ($n{=}394$):
+    309 healthy (78.4\,\%) and 85 pinkeye (21.6\,\%), matching folder labels
+    after YOLO cropping.}
+  \label{fig:dataset_dist}
+\end{figure}
 
-all four models under the full augmentation configuration.
+\subsection{Main Classification Benchmark}
+\label{subsec:main_benchmark}
+
+Table~\ref{tab:benchmark} lists 5-fold mean$\,\pm\,$std performance under
+the full augmentation configuration (policy~(i)). Figure~\ref{fig:f1bar}
+visualises mean F1$_{\mathrm{PE}}$ with error bars using the same
+fold-wise summaries as Table~\ref{tab:benchmark}.
 
 \begin{table*}[t]
-  \caption{Stage~2 Classification Results -- Baseline Augmentation (5-fold mean\,$\pm$\,std).
-    Best result in each column is \textbf{bold}.}
+  \caption{Stage~2 classification under full augmentation (5-fold
+    mean$\,\pm\,$std). Best per column in bold.}
   \label{tab:benchmark}
   \centering
   \setlength{\tabcolsep}{5pt}
@@ -416,17 +391,25 @@ all four models under the full augmentation configuration.
     \bottomrule
   \end{tabular}
   \\[2pt]
-  \small PE = pink-eye (minority class).
+  \small PE $=$ pinkeye (minority class). Metrics aggregated from five-fold
+    validation.
 \end{table*}
 
-\subsubsection{Per-Fold Results}
-Table~\ref{tab:per_fold} details per-fold accuracy and F1\_pinkeye for
-the two best-performing architectures, ResNet18 and Strong
-CNN+Transformer, demonstrating consistent cross-fold behaviour.
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{figures/benchmark_f1_pinkeye.pdf}
+  \caption{Mean$\,\pm\,$std F1$_{\mathrm{PE}}$ under full augmentation,
+    replotted from the same statistics as Table~\ref{tab:benchmark}.}
+  \label{fig:f1bar}
+\end{figure}
+
+\subsection{Fold-Level Behaviour and Confusion Matrix}
+Table~\ref{tab:per_fold} gives per-fold accuracy and F1$_{\mathrm{PE}}$
+for ResNet18 and Strong CNN+Transformer. Table~\ref{tab:confusion}
+aggregates confusion counts across folds for Strong CNN+Transformer.
 
 \begin{table}[h]
-  \caption{Per-Fold Accuracy and F1\textsubscript{PE} for ResNet18 and
-    Strong CNN+Transformer (Baseline Augmentation)}
+  \caption{Per-fold accuracy and F1$_{\mathrm{PE}}$ (full augmentation).}
   \label{tab:per_fold}
   \centering
   \begin{tabular}{ccccc}
@@ -450,16 +433,9 @@ CNN+Transformer, demonstrating consistent cross-fold behaviour.
   \end{tabular}
 \end{table}
 
-\subsubsection{Aggregated Confusion Matrix}
-Summing prediction counts across all 5 validation folds for the Strong
-CNN+Transformer yields the aggregate confusion matrix in
-Table~\ref{tab:confusion}. Out of 85 pink-eye samples, 76 were correctly
-identified (recall = 89.4\,\%); 7 healthy eyes were falsely labelled as
-diseased.
-
 \begin{table}[h]
-  \caption{Aggregated Confusion Matrix -- Strong CNN+Transformer
-    (all 5 folds, $n=394$)}
+  \caption{Aggregated confusion matrix for Strong CNN+Transformer (sum over
+    validation folds; total samples $=394$).}
   \label{tab:confusion}
   \centering
   \begin{tabular}{ccc}
@@ -474,34 +450,25 @@ diseased.
   \end{tabular}
 \end{table}
 
-\begin{figure}[h]
-  \centering
-  \begin{subfigure}[b]{0.49\linewidth}
-    \includegraphics[width=\linewidth]{outputs/benchmark_gpu/cnn_transformer_strong/plots/cnn_transformer_strong_fold2_confusion.png}
-    \caption{Fold~2 confusion matrix.}
-    \label{fig:strong_cm}
-  \end{subfigure}
-  \hfill
-  \begin{subfigure}[b]{0.49\linewidth}
-    \includegraphics[width=\linewidth]{outputs/benchmark_gpu/cnn_transformer_strong/plots/cnn_transformer_strong_fold2_roc.png}
-    \caption{Fold~2 ROC curve (AUC~=~0.983).}
-    \label{fig:strong_roc}
-  \end{subfigure}
-  \caption{Strong CNN+Transformer classification quality (Fold~2).}
-  \label{fig:strong_quality}
-\end{figure}
+Fold-level confusion matrices, ROC curves, and learning curves were saved
+with the original GPU experiments but are omitted here for brevity.
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{outputs/benchmark_gpu/cnn_transformer_strong/plots/cnn_transformer_strong_fold2_curves.png}
-  \caption{Training and validation loss / F1\_pinkeye curves for the
-    Strong CNN+Transformer (Fold~2). Smooth convergence is observed
-    with no signs of overfitting.}
-  \label{fig:strong_curves}
-\end{figure}
+\subsection{Augmentation Comparisons}
 
+\subsubsection{Removing Colour Augmentation}
+Table~\ref{tab:no_color_delta} contrasts policy~(i) (full augmentation)
+with policy~(ii) (no colour) using five-fold mean F1$_{\mathrm{PE}}$ and
+accuracy.
+
+\begin{table}[t]
+  \caption{Effect of removing colour-related augmentation: mean
+    F1$_{\mathrm{PE}}$ and accuracy (5-fold mean).}
+  \label{tab:no_color_delta}
+  \centering
+  \begin{tabular}{lcccc}
+    \toprule
     \textbf{Model}
-      & \textbf{F1\textsubscript{PE} (base)}
+      & \textbf{F1\textsubscript{PE} (full)}
       & \textbf{F1\textsubscript{PE} (no-col)}
       & \textbf{$\Delta$F1}
       & \textbf{$\Delta$Acc} \\
@@ -518,22 +485,21 @@ diseased.
   \end{tabular}
 \end{table}
 
-Colour jitter improves performance for both EfficientNet-B0 and the
-hybrid models while slightly degrading ResNet18, suggesting that
-deeper or transformer-augmented architectures benefit from richer colour
-regularisation.
+Removing colour augmentation improved ResNet18 but reduced F1$_{\mathrm{PE}}$
+for EfficientNet-B0 and both hybrid models, indicating an interaction
+between architecture and augmentation strength.
 
-\subsubsection{Effect of Gaussian Noise}
-Table~\ref{tab:ablation_noise} isolates the contribution of mild Gaussian
-noise by comparing the no-colour configuration (flip + rotation + noise)
-against a pure geometric configuration (flip + rotation only).
+\subsubsection{Gaussian Noise Ablation}
+Table~\ref{tab:ablation_noise} compares no-colour training with and without
+Gaussian noise by juxtaposing policy~(ii) and policy~(iii) means under the
+same protocol.
 
 \begin{table}[h]
-  \caption{Gaussian Noise Ablation -- F1\textsubscript{PE} (mean).
-    $\Delta$ = flip+rotation $-$ no-colour (i.e.\ noise removed).}
+  \caption{Gaussian noise ablation: mean F1$_{\mathrm{PE}}$.
+    $\Delta$ is flip+rotation (no noise) minus no-colour+noise.}
   \label{tab:ablation_noise}
   \centering
-  \begin{tabular}{lcccc}
+  \begin{tabular}{lccc}
     \toprule
     \textbf{Model}
       & \textbf{No-col+noise}
@@ -547,17 +513,14 @@ against a pure geometric configuration (flip + rotation only).
   \end{tabular}
 \end{table}
 
-Gaussian noise acts as beneficial regularisation for CNN baselines but
-is detrimental to the Strong CNN+Transformer, which achieves its best
-F1\_pinkeye under the geometric-only setting.
-
-\subsubsection{Effect of Minority-Only Augmentation}
-Table~\ref{tab:ablation_minority} evaluates applying geometric
-augmentation exclusively to minority class (pink-eye) samples.
+\subsubsection{Minority-Only Augmentation}
+Table~\ref{tab:ablation_minority} summarises mean F1$_{\mathrm{PE}}$ under
+no-colour+noise, all-class flip+rotation, and minority-only
+flip+rotation under the same protocol.
 
 \begin{table}[h]
-  \caption{Minority-Only vs.\ All-Class Augmentation -- F1\textsubscript{PE}
-    (mean over 5 folds).}
+  \caption{Minority-only versus all-class geometric augmentation
+    (mean F1$_{\mathrm{PE}}$).}
   \label{tab:ablation_minority}
   \centering
   \setlength{\tabcolsep}{4pt}
@@ -567,7 +530,7 @@ augmentation exclusively to minority class (pink-eye) samples.
       & \textbf{No-col+noise}
       & \textbf{Flip+rot (all)}
       & \textbf{Flip+rot (min.)}
-      & \textbf{Best config.} \\
+      & \textbf{Best setting} \\
     \midrule
     ResNet18
       & \textbf{0.9190} & 0.8979 & 0.9060 & no-col+noise \\
@@ -579,36 +542,27 @@ augmentation exclusively to minority class (pink-eye) samples.
   \end{tabular}
 \end{table}
 
-Minority-only augmentation outperforms all-class geometric augmentation
-for CNN baselines but falls short of the no-colour+noise baseline.
-For the Strong CNN+Transformer, minority-only augmentation is the least
-effective strategy.
-
-% ----------------------------------------------------------------
-\subsection{Summary Comparison Across All Configurations}
-\label{subsec:summary_comparison}
-
-Table~\ref{tab:full_comparison} provides a consolidated view of every
-experimental configuration and its best model, facilitating direct
-comparison of the complete ablation landscape.
+\subsubsection{Best Model per Configuration}
+Table~\ref{tab:full_comparison} condenses the best mean accuracy and
+F1$_{\mathrm{PE}}$ per augmentation regime.
 
 \begin{table*}[t]
-  \caption{Complete Ablation Summary -- Best Model per Configuration and
-    the corresponding F1\textsubscript{PE} and Accuracy (5-fold mean).}
+  \caption{Best mean accuracy / F1$_{\mathrm{PE}}$ by augmentation
+    regime (5-fold means).}
   \label{tab:full_comparison}
   \centering
   \begin{tabular}{llcc}
     \toprule
     \textbf{Configuration}
-      & \textbf{Best Model}
+      & \textbf{Best model}
       & \textbf{Accuracy}
       & \textbf{F1\textsubscript{PE}} \\
     \midrule
-    Full augmentation (colour jitter)
+    Full augmentation (colour + affine)
       & Strong CNN+Transformer
       & $0.9594 \pm 0.0106$
       & $0.9051 \pm 0.0214$ \\
-    No colour augmentation (+ Gaussian noise)
+    No colour (+ Gaussian noise)
       & ResNet18
       & $0.9645 \pm 0.0165$
       & $0.9190 \pm 0.0374$ \\
@@ -624,254 +578,92 @@ comparison of the complete ablation landscape.
   \end{tabular}
 \end{table*}
 
-Across all four configurations, the Strong CNN+Transformer achieves the
-overall best accuracy (95.94\,\%) and F1\_pinkeye (90.51\,\%) under the
-full augmentation setting. ResNet18 with no-colour augmentation yields
-the highest absolute F1\_pinkeye (91.90\,\%) but with greater
-fold-to-fold variance ($\pm 3.74$\,\% vs.\ $\pm 2.14$\,\% for Strong
-CNN+Transformer with full aug.).
+Under the primary full-augmentation benchmark, Strong CNN+Transformer
+delivers the highest mean accuracy and F1$_{\mathrm{PE}}$. Under the
+no-colour policy, ResNet18 achieves a higher mean F1$_{\mathrm{PE}}$
+(0.9190) but with larger fold-wise dispersion ($\pm 0.0374$ vs.\
+$\pm 0.0214$ for Strong CNN+Transformer under full augmentation).
 
+\subsection{DDPM-Based Synthetic Augmentation (Pilot)}
+\label{subsec:ddpm_pilot}
 
-% % ----------------------------------------------------------------
-% \subsection{Explainability: Gradient-weighted Class Activation Maps}
-% \label{subsec:gradcam}
+To probe generative remedies for class imbalance, we trained a
+class-conditional denoising diffusion probabilistic model (DDPM)
+\cite{ho2020ddpm} to synthesise eye crops labelled \emph{healthy} or
+\emph{pinkeye}, matching the Stage~2 taxonomy. The diffusion training
+configuration used batch size~16, $T{=}10{,}000$ noise steps, and
+2048~epochs. Figure~\ref{fig:ddpm_qualitative} shows representative
+real crops from the classification pool next to synthetic draws from the
+trained generators for each class.
 
-% To provide qualitative insight into model decisions, Gradient-weighted
-% Class Activation Mapping (Grad-CAM)~\cite{selvaraju2017gradcam} was
-% applied to both CNN baselines (ResNet18 and EfficientNet-B0). Saliency
-% maps were computed for the final convolutional layer and overlaid on the
-% original eye crops, highlighting the spatial regions most influential
-% for the predicted class. Grad-CAM was not applied to the transformer
-% models owing to architectural incompatibility with spatial
-% gradient-based attribution.
+The intended workflow is to screen synthetic samples for anatomical and
+pathology plausibility, then add accepted images to training folds in a
+controlled mix with real data, re-run the stratified 5-fold Stage~2
+benchmarks, and compare minority-class recall and F1$_{\mathrm{PE}}$
+against real-only training. Those mixed training runs are preparatory:
+all tables above report models trained only on real eye crops.
 
-
-
-
-
-
-% % ----------------------------------------------------------------
-% \subsection{Explainability Analysis}
-% \label{subsec:gradcam_results}
-
-% Grad-CAM maps were computed for EfficientNet-B0 (Fold~3) and ResNet18
-% across all folds. For healthy eyes, saliency was broadly distributed
-% across the clear corneal and scleral regions. For pink-eye samples, the
-% models consistently activated on the conjunctival and peripheral corneal
-% areas, regions where hyperaemia and discharge are clinically apparent.
-% This alignment between model attention and known clinical features
-% supports the diagnostic validity of the learned representations.
-
-% \begin{figure}[h]
-%   \centering
-%   \includegraphics[width=\linewidth]{outputs/benchmark_gpu/efficientnet/explainability/efficientnet_b0/fold_3/gradcam_001_1 (19).jpg.png}
-%   \caption{Grad-CAM saliency map for a pink-eye sample (EfficientNet-B0,
-%     Fold~3). The model focuses on the inflamed conjunctival and peripheral
-%     corneal region, consistent with clinical IBK presentation.}
-%   \label{fig:gradcam_pe}
-% \end{figure}
-
-% % ----------------------------------------------------------------
-% \subsection{Discussion}
-% \label{subsec:discussion}
-
-% \subsubsection{Why the Strong CNN+Transformer Performs Best}
-% Under full augmentation, the Strong CNN+Transformer achieves the highest
-% accuracy (95.94\,\%) and F1\_pinkeye (90.51\,\%) among the four
-% architectures. Several factors contribute to this:
-
-% \begin{enumerate}
-%   \item \textbf{CLS-token aggregation.} The model learns a dedicated
-%     global representation rather than relying on mean pooling, enabling
-%     more focused classification signals.
-%   \item \textbf{Learnable positional embeddings.} Explicit position
-%     encoding preserves spatial structure within the eye image, aiding
-%     recognition of anatomically meaningful patterns.
-%   \item \textbf{Complementary representations.} The CNN backbone captures
-%     fine-grained local texture cues (e.g., corneal haze, discharge
-%     streaks) while the Transformer encoder models long-range spatial
-%     correlations.
-%   \item \textbf{Deeper MLP head.} The LayerNorm--Linear--GELU--Dropout--
-%     Linear sequence provides greater discriminative capacity for
-%     separating subtle healthy vs.\ diseased appearances.
-% \end{enumerate}
-
-% \subsubsection{Architecture--Augmentation Interactions}
-% The ablation studies reveal that the optimal augmentation strategy is
-% architecture-dependent. Colour jitter benefits deeper and hybrid
-% architectures (EfficientNet-B0, both hybrid models) but slightly hurts
-% ResNet18. Gaussian noise is regularising for shallow CNNs but harmful
-% for the stronger transformer hybrid. These findings suggest that future
-% work should systematically tune augmentation policies per architecture,
-% potentially using automated augmentation search strategies such as
-% AutoAugment~\cite{cubuk2019autoaugment} or RandAugment~\cite{cubuk2020randaugment}.
-
-% \subsubsection{Limitations and Future Work}
-% The primary limitation is dataset size: 394 labelled eye crops represent
-% a modest training set for deep learning. To address this, we have designed
-% a Denoising Diffusion Probabilistic Model (DDPM)~\cite{ho2020ddpm}
-% pipeline (Stage~2.5) that generates synthetic eye images conditioned on
-% the disease class label. A conditional UNet with class embeddings is
-% trained on the real crops; the trained model can then generate additional
-% pink-eye samples to rebalance the dataset. Integration of synthetic
-% augmentation into the classification pipeline is reserved for future work.
-% Additionally, extending the evaluation to multi-class grading (mild /
-% moderate / severe IBK) and testing on cattle from diverse geographic
-% regions and breeds would strengthen clinical applicability.
-
-% %% ============================================================
-% \section*{Acknowledgements}
-% The authors acknowledge computing resources provided by [HPC Centre].
-% All experiments were conducted on Tesla V100-PCIE-16\,GB GPUs via SLURM
-% cluster scheduling.
-
-% %% ============================================================
-% \bibliographystyle{IEEEtran}
-% \begin{thebibliography}{10}
-
-% \bibitem{roboflow_eye}
-% I.\ Khazrak,
-% ``Eye Detection Dataset (v3),''
-% Roboflow Universe, 2026.
-% [Online]. Available: \url{https://universe.roboflow.com/imans-workspace-rsc4n/eye-detection-fayd6}
-
-% \bibitem{he2016resnet}
-% K.\ He, X.\ Zhang, S.\ Ren, and J.\ Sun,
-% ``Deep Residual Learning for Image Recognition,''
-% in \emph{Proc.\ IEEE/CVF CVPR}, 2016, pp.\ 770--778.
-
-% \bibitem{tan2019efficientnet}
-% M.\ Tan and Q.\ V.\ Le,
-% ``EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks,''
-% in \emph{Proc.\ ICML}, 2019, pp.\ 6105--6114.
-
-% \bibitem{dosovitskiy2020vit}
-% A.\ Dosovitskiy \emph{et al.},
-% ``An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale,''
-% in \emph{Proc.\ ICLR}, 2021.
-
-% \bibitem{loshchilov2018adamw}
-% I.\ Loshchilov and F.\ Hutter,
-% ``Decoupled Weight Decay Regularization,''
-% in \emph{Proc.\ ICLR}, 2019.
-
-% \bibitem{rw2019timm}
-% R.\ Wightman,
-% ``PyTorch Image Models,''
-% GitHub, 2019.
-% [Online]. Available: \url{https://github.com/rwightman/pytorch-image-models}
-
-% \bibitem{selvaraju2017gradcam}
-% R.\ R.\ Selvaraju, M.\ Cogswell, A.\ Das, R.\ Vedantam, D.\ Parikh,
-% and D.\ Batra,
-% ``Grad-CAM: Visual Explanations from Deep Networks via
-% Gradient-Based Localization,''
-% in \emph{Proc.\ IEEE ICCV}, 2017, pp.\ 618--626.
-
-% \bibitem{ultralytics2023yolov8}
-% G.\ Jocher, A.\ Chaurasia, and J.\ Qiu,
-% ``Ultralytics YOLOv8,''
-% GitHub, 2023.
-% [Online]. Available: \url{https://github.com/ultralytics/ultralytics}
-
-% \bibitem{ho2020ddpm}
-% J.\ Ho, A.\ Jain, and P.\ Abbeel,
-% ``Denoising Diffusion Probabilistic Models,''
-% in \emph{Advances in Neural Information Processing Systems (NeurIPS)},
-% vol.\ 33, 2020, pp.\ 6840--6851.
-
-% \bibitem{cubuk2019autoaugment}
-% E.\ D.\ Cubuk, B.\ Zoph, D.\ Mane, V.\ Vasudevan, and Q.\ V.\ Le,
-% ``AutoAugment: Learning Augmentation Strategies from Data,''
-% in \emph{Proc.\ IEEE/CVF CVPR}, 2019, pp.\ 113--123.
-
-% \bibitem{cubuk2020randaugment}
-% E.\ D.\ Cubuk, B.\ Zoph, J.\ Shlens, and Q.\ V.\ Le,
-% ``RandAugment: Practical Automated Data Augmentation with a Reduced
-% Search Space,''
-% in \emph{Proc.\ IEEE/CVF CVPR Workshops}, 2020.
-
-% \end{thebibliography}
-
-% \end{document}
-
-
-% ----------------------------------------------------------------
-\subsection{Explainability Analysis}
-\label{subsec:gradcam_results}
-
-Grad-CAM maps were computed for EfficientNet-B0 (Fold~3) and ResNet18
-across all folds. For healthy eyes, saliency was broadly distributed
-across the clear corneal and scleral regions. For pink-eye samples, the
-models consistently activated on the conjunctival and peripheral corneal
-areas, regions where hyperaemia and discharge are clinically apparent.
-This alignment between model attention and known clinical features
-supports the diagnostic validity of the learned representations.
-
-\begin{figure}[h]
+\begin{figure*}[t]
   \centering
-  \includegraphics[width=\linewidth]{outputs/benchmark_gpu/efficientnet/explainability/efficientnet_b0/fold_3/gradcam_001_1 (19).jpg.png}
-  \caption{Grad-CAM saliency map for a pink-eye sample (EfficientNet-B0,
-    Fold~3). The model focuses on the inflamed conjunctival and peripheral
-    corneal region, consistent with clinical IBK presentation.}
-  \label{fig:gradcam_pe}
-\end{figure}
+  \begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/ddpm_healthy_original.jpg}\\[2pt]
+    \footnotesize (a)~Healthy crop (real)
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/ddpm_healthy_synthetic.png}\\[2pt]
+    \footnotesize (b)~Healthy (DDPM synthetic)
+  \end{minipage}\\[10pt]
+  \begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/ddpm_pinkeye_original.jpg}\\[2pt]
+    \footnotesize (c)~Pinkeye crop (real)
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\textwidth}
+    \centering
+    \includegraphics[width=\linewidth]{figures/ddpm_pinkeye_synthetic.png}\\[2pt]
+    \footnotesize (d)~Pinkeye (DDPM synthetic)
+  \end{minipage}
+  \caption{Qualitative comparison of real Stage~2 crops and class-conditional
+    DDPM samples (pilot augmentation study). Training used batch size~16,
+    $T{=}10{,}000$, and 2048~epochs.}
+  \label{fig:ddpm_qualitative}
+\end{figure*}
 
-% ----------------------------------------------------------------
-\subsection{Discussion}
-\label{subsec:discussion}
+\section{Discussion}
+\label{sec:discussion}
 
-\subsubsection{Why the Strong CNN+Transformer Performs Best}
-Under full augmentation, the Strong CNN+Transformer achieves the highest
-accuracy (95.94\,\%) and F1\_pinkeye (90.51\,\%) among the four
-architectures. Several factors contribute to this:
+\subsection{Architecture Rankings and Augmentation Interactions}
+Strong CNN+Transformer leads on mean accuracy and F1$_{\mathrm{PE}}$ when
+the richer augmentation policy is used, while ResNet18 achieves the
+best mean ROC-AUC in Table~\ref{tab:benchmark} and the best mean
+F1$_{\mathrm{PE}}$ under the no-colour regime (Table~\ref{tab:full_comparison}).
+The ablations indicate that colour and affine regularisation in policy~(i)
+particularly benefit the deeper CNN and hybrid models, whereas the
+shallow ResNet benefits when colour perturbations are omitted.
 
-\begin{enumerate}
-  \item \textbf{CLS-token aggregation.} The model learns a dedicated
-    global representation rather than relying on mean pooling, enabling
-    more focused classification signals.
-  \item \textbf{Learnable positional embeddings.} Explicit position
-    encoding preserves spatial structure within the eye image, aiding
-    recognition of anatomically meaningful patterns.
-  \item \textbf{Complementary representations.} The CNN backbone captures
-    fine-grained local texture cues (e.g., corneal haze, discharge
-    streaks) while the Transformer encoder models long-range spatial
-    correlations.
-  \item \textbf{Deeper MLP head.} The LayerNorm--Linear--GELU--Dropout--
-    Linear sequence provides greater discriminative capacity for
-    separating subtle healthy vs.\ diseased appearances.
-\end{enumerate}
+\subsection{Qualitative Attribution}
+Gradient-based Grad-CAM visualisations \cite{selvaraju2017gradcam} were
+computed for the CNN baselines during training. Illustrative overlays are
+not reproduced in this manuscript; qualitatively, saliency tended to align
+with conjunctival and peripheral corneal regions on pinkeye crops, consistent
+with clinical presentation.
 
-\subsubsection{Architecture--Augmentation Interactions}
-The ablation studies reveal that the optimal augmentation strategy is
-architecture-dependent. Colour jitter benefits deeper and hybrid
-architectures (EfficientNet-B0, both hybrid models) but slightly hurts
-ResNet18. Gaussian noise is regularising for shallow CNNs but harmful
-for the stronger transformer hybrid. These findings suggest that future
-work should systematically tune augmentation policies per architecture,
-potentially using automated augmentation search strategies such as
-AutoAugment~\cite{cubuk2019autoaugment} or RandAugment~\cite{cubuk2020randaugment}.
+\subsection{Limitations and Future Work}
+The dataset size (85 pinkeye crops) limits generalisation claims. A
+class-conditional DDPM for synthetic augmentation was trained
+\cite{ho2020ddpm}; Figure~\ref{fig:ddpm_qualitative} illustrates sample
+quality relative to real crops. Systematic Stage~2 fine-tuning with
+curated synthetic augmentation and reporting against the benchmark protocol
+remains future work. Broader directions include larger multi-site
+collections, severity grading, and external validation.
 
-\subsubsection{Limitations and Future Work}
-The primary limitation is dataset size: 394 labelled eye crops represent
-a modest training set for deep learning. To address this, we have designed
-a Denoising Diffusion Probabilistic Model (DDPM)~\cite{ho2020ddpm}
-pipeline (Stage~2.5) that generates synthetic eye images conditioned on
-the disease class label. A conditional UNet with class embeddings is
-trained on the real crops; the trained model can then generate additional
-pink-eye samples to rebalance the dataset. Integration of synthetic
-augmentation into the classification pipeline is reserved for future work.
-Additionally, extending the evaluation to multi-class grading (mild /
-moderate / severe IBK) and testing on cattle from diverse geographic
-regions and breeds would strengthen clinical applicability.
-
-%% ============================================================
 \section*{Acknowledgements}
 The authors acknowledge computing resources provided by [HPC Centre].
-All experiments were conducted on Tesla V100-PCIE-16\,GB GPUs via SLURM
-cluster scheduling.
+Step~1 and Step~2 GPU jobs used the institution's SLURM-managed cluster with
+CUDA modules provisioned by the computing centre.
 
-%% ============================================================
 \bibliographystyle{IEEEtran}
 \begin{thebibliography}{10}
 
@@ -880,6 +672,10 @@ I.\ Khazrak,
 ``Eye Detection Dataset (v3),''
 Roboflow Universe, 2026.
 [Online]. Available: \url{https://universe.roboflow.com/imans-workspace-rsc4n/eye-detection-fayd6}
+
+\bibitem{advisor_summary}
+Internal technical memorandum, Cattle Pinkeye Detection project,
+Mar.\ 2026 (dataset inventory and crop statistics).
 
 \bibitem{he2016resnet}
 K.\ He, X.\ Zhang, S.\ Ren, and J.\ Sun,
@@ -890,11 +686,6 @@ in \emph{Proc.\ IEEE/CVF CVPR}, 2016, pp.\ 770--778.
 M.\ Tan and Q.\ V.\ Le,
 ``EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks,''
 in \emph{Proc.\ ICML}, 2019, pp.\ 6105--6114.
-
-\bibitem{dosovitskiy2020vit}
-A.\ Dosovitskiy \emph{et al.},
-``An Image is Worth 16x16 Words: Transformers for Image Recognition at Scale,''
-in \emph{Proc.\ ICLR}, 2021.
 
 \bibitem{loshchilov2018adamw}
 I.\ Loshchilov and F.\ Hutter,
@@ -925,17 +716,6 @@ J.\ Ho, A.\ Jain, and P.\ Abbeel,
 ``Denoising Diffusion Probabilistic Models,''
 in \emph{Advances in Neural Information Processing Systems (NeurIPS)},
 vol.\ 33, 2020, pp.\ 6840--6851.
-
-\bibitem{cubuk2019autoaugment}
-E.\ D.\ Cubuk, B.\ Zoph, D.\ Mane, V.\ Vasudevan, and Q.\ V.\ Le,
-``AutoAugment: Learning Augmentation Strategies from Data,''
-in \emph{Proc.\ IEEE/CVF CVPR}, 2019, pp.\ 113--123.
-
-\bibitem{cubuk2020randaugment}
-E.\ D.\ Cubuk, B.\ Zoph, J.\ Shlens, and Q.\ V.\ Le,
-``RandAugment: Practical Automated Data Augmentation with a Reduced
-Search Space,''
-in \emph{Proc.\ IEEE/CVF CVPR Workshops}, 2020.
 
 \end{thebibliography}
 
