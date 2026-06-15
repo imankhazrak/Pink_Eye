@@ -1,0 +1,603 @@
+
+
+\documentclass[preprint,12pt,authoryear]{elsarticle}
+
+
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{subcaption}
+\usepackage{xcolor}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{float}
+%\usepackage{cite}
+\usepackage{url}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric}
+\usepackage{natbib}
+
+\journal{Nuclear Physics B}
+
+\begin{document}
+
+\begin{frontmatter}
+
+%% Title, authors and addresses
+
+%% use the tnoteref command within \title for footnotes;
+%% use the tnotetext command for theassociated footnote;
+%% use the fnref command within \author or \affiliation for footnotes;
+%% use the fntext command for theassociated footnote;
+%% use the corref command within \author for corresponding author footnotes;
+%% use the cortext command for theassociated footnote;
+%% use the ead command for the email address,
+%% and the form \ead[url] for the home page:
+%% \title{Title\tnoteref{label1}}
+%% \tnotetext[label1]{}
+%% \author{Name\corref{cor1}\fnref{label2}}
+%% \ead{email address}
+%% \ead[url]{home page}
+%% \fntext[label2]{}
+%% \cortext[cor1]{}
+%% \affiliation{organization={},
+%%            addressline={}, 
+%%            city={},
+%%            postcode={}, 
+%%            state={},
+%%            country={}}
+%% \fntext[label3]{}
+
+\title{Pinkeye Detection and Prediction} %% Article title
+
+%% use optional labels to link authors explicitly to addresses:
+%% \author[label1,label2]{}
+%% \affiliation[label1]{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+%%
+%% \affiliation[label2]{organization={},
+%%             addressline={},
+%%             city={},
+%%             postcode={},
+%%             state={},
+%%             country={}}
+
+\author[1]{Iman Khazrak} %% Author name
+\author[1]{Rob Green} %% Author name
+\author[2]{Pei Wang} %% Author name
+\author[3]{Jameson Brennan} %% Author name
+\author[2]{Hossein Moradi Rekabdarkolaee} %% Author name
+
+%% Author affiliation
+\affiliation[1]{organization={Department of Computer Science, Bowling Green State University},%Department and Organization
+%            addressline={}, 
+            city={Bowling Green},
+%            postcode={}, 
+            state={Ohio},
+            country={USA}}
+
+
+\affiliation[2]{organization={Department of Business Analytics, Economics, and Information Systems, Bowling Green State University},%Department and Organization
+%            addressline={}, 
+            city={Bowling Green},
+%            postcode={}, 
+            state={Ohio},
+            country={USA}}
+
+\affiliation[3]{organization={Department of Animal Science, South Dakota State University West River Research and Extension},%Department and Organization
+%            addressline={}, 
+            city={Rapid City},
+%            postcode={}, 
+            state={South Dakota},
+            country={USA}}
+
+%% Abstract
+\begin{abstract}
+%% Text of abstract
+Infectious bovine keratoconjunctivitis (IBK), commonly known as pinkeye, is a highly contagious ocular disease in cattle that causes significant welfare and economic losses. Early automated detection from farm images can enable timely veterinary intervention. We present a two-stage deep learning pipeline: \emph{Stage~1} localizes the eye region using a YOLOv8 detector, and \emph{Stage~2} classifies the cropped eye as healthy or pinkeye-positive using four architectures: ResNet18, EfficientNet-B0, a baseline CNN+Transformer hybrid, and an enhanced CNN+Transformer variant with a class token and deeper head. Evaluated on 394 labeled eye crops (309 healthy, 85 pinkeye) under stratified 5-fold cross-validation, the Strong CNN+Transformer achieves the highest mean accuracy (95.94\,\%) and the highest mean F1-score on the minority pinkeye class (90.51\,\%); ResNet18 attains the highest mean ROC-AUC (98.67\,\%) among the four models in the primary benchmark. Augmentation ablations show architecture-dependent gains and trade-offs. These results support eye-localized classification as a feasible screen for this imbalanced, fine-grained imaging setting.
+\end{abstract}
+
+%%Graphical abstract
+%\begin{graphicalabstract}
+%\includegraphics{grabs}
+%\end{graphicalabstract}
+
+%%Research highlights
+%\begin{highlights}
+%\item Research highlight 1
+%\item Research highlight 2
+%\end{highlights}
+
+%% Keywords
+\begin{keyword}
+Pinkeye detection \sep YOLOv8\sep CNN+Transformer\sep class imbalance\sep data augmentation\sep cattle health monitoring\sep transfer learning.
+
+\end{keyword}
+
+\end{frontmatter}
+
+
+\section{Introduction}
+\label{intro}
+
+Bovine pinkeye, also called infectious bovine keratoconjunctivitis (IBK), is a very contagious eye disease that occurs in cattle around the world. It is widely known as the most common and important eye problem in both beef and dairy cattle systems \citep{brown1998}. The disease is mainly caused by bacteria such as Moraxella bovis. Common signs include watery eyes, swelling of the conjunctiva, ulcers on the cornea, and in more serious cases, damage to the cornea and even blindness \citep{kizilkaya2013}. Although IBK does not usually cause death, it can strongly affect animal well-being and farm productivity, mostly because infected cattle eat less and have trouble seeing \citep{kizilkaya2013}.
+
+In the United States, IBK causes serious financial losses for the cattle industry. It is viewed as one of the costliest diseases in beef production, with yearly losses estimated to be more than $150$ million. These losses come from slower growth, treatment expenses, and extra management costs \citep{bartenslager2021, angelos2015}. One major reason for the loss is lower weight gain in infected animals. For instance, calves with IBK can have weaning weights about $8.9$ kg less than healthy calves \citep{kilama2025}. Besides weight loss, the disease can also reduce milk yield and overall performance. This happens because infected cattle experience pain and stress, and they do not use feed as efficiently \citep{kilama2025}.
+
+IBK continues to be a serious problem for the cattle industry because it occurs often, has many possible causes, and leads to large economic losses. For these reasons, researchers are still working on better ways to detect the disease early, prevent it, and manage it more effectively. The goal of this work is to reduce production losses and improve the health and well-being of cattle \citep{gupta2023}.
+
+Methods used to identify IBK have changed over time, moving from simple visual checks to more advanced molecular and data-based techniques. In the past, diagnosis mainly depended on visible signs such as tearing, eye inflammation, and cloudy corneas. However, these signs usually show up after the disease has already started, and they can look similar to other eye problems, which makes accurate diagnosis more difficult \citep{snowder2005, angelos2015}. Because of these limits, more recent studies have focused on finding earlier and more specific ways to detect the disease, especially methods that target the exact pathogen.
+
+Modern laboratory methods have improved IBK detection by directly identifying causative bacteria. Polymerase chain reaction (PCR) is widely used to detect Moraxella bovis and Moraxella bovoculi, offering higher sensitivity and accuracy than traditional culture methods \citep{angelos2007, angelos2015}. Matrix-assisted laser desorption/ionization time-of-flight mass spectrometry (MALDI-TOF MS) also enables rapid and reliable differentiation of closely related bacterial species \citep{seng2009}. More recently, next-generation sequencing (NGS) has been applied to study the bovine ocular microbiome, showing that IBK is linked to shifts in microbial communities rather than a single pathogen, supporting its multi-factorial nature \citep{holman2017}.
+
+Because molecular tests are often costly and take time to complete, recent studies have explored data-driven methods for earlier IBK detection. In particular, machine learning and image-based approaches can analyze eye images and animal behavior to identify early signs of the disease. These methods are non-invasive and can support real-time monitoring \citep{gupta2023, mahmud2021}. These studies reflect a shift toward automated and predictive systems that can help farmers monitor large herds more efficiently and respond to disease at an earlier stage \citep{mahmud2021, mia2025}.
+
+In this study, we propose a two-step framework for detecting pinkeye in cattle. The first step focuses on localizing and cropping the eye region, while the second step benchmarks classification performance. To address data imbalance, several data augmentation strategies are evaluated. In the classification stage, multiple state-of-the-art deep learning models are applied and compared. Overall, the eye-only approach demonstrates strong potential for pinkeye screening, with both model selection and augmentation strategies having a notable impact on performance for the minority class.
+
+\section{Data}
+\label{dataset}
+
+All animal work followed established ethical guidelines for the use of animals in research and was carried out under an approved protocol from the South Dakota State University Institutional Animal Care and Use Committee (IACUC; protocol \#2501-010E). The study took place at the South Dakota State University Cottonwood Field Station (CFS) in the mixed-grass prairie of the Northern Great Plains, where elevation ranges from 710 to 784 m. Data were collected during the summers of 2023–2024 using yearling Angus beef steers, which were managed through the CFS livestock handling facilities and processed in a SilencerTM hydraulic squeeze chute (Moly mfg., Lorraine, KS, USA). For each steer, two lateral (left and right) images were acquired with a digital camera during handling. Animals diagnosed with pinkeye received treatment according to the standard health management procedures in place at the Cottonwood Field Station. All photographs used in this work were obtained with a FujiFilm FinePix AX655 16MP digital camera equipped with a CMOS sensor, 5x optical zoom, and optical plus digital image stabilization, producing high-resolution images suitable for subsequent analysis. Image files were standardized to JPG format. Trained personnel assigned each image a folder-level label of healthy or pinkeye-positive. The Stage~2 classification pool contained 408 JPG images with folder-level labels: 323 healthy images and 85 pinkeye images. After YOLOv8 inference and eye cropping, 394 images yielded usable eye crops, including 309 healthy crops and 85 pinkeye crops; 14 images had no passing eye detection and were set aside for manual review.
+
+\textbf{Dataset roles.} Stage~1 and Stage~2 rely on different image pools. The eye detector was trained on 117 Roboflow-annotated cattle head images with only eye-localization labels. The IBK classification benchmark uses 408 field images collected at CFS with binary healthy/pinkeye labels. After detector cropping, 394 images yielded usable eye crops, including 309 healthy and 85 pinkeye crops, while 14 images had no passing detection and were set aside for manual review.
+
+\begin{table}[t]
+  \caption{Summary of image corpora used in Stage~1 eye detection and Stage~2 IBK classification. Stage~1 training data are separate from the Stage~2 field-image pool.}
+  \label{tab:dataset_summary}
+  \centering
+  \begin{tabular}{llr}
+    \toprule
+    \textbf{Component} & \textbf{Description} & \textbf{Count} \\
+    \midrule
+    Stage~1 detector training pool & Roboflow-annotated cattle head images with eye boxes & 117 \\
+    Stage~1 split & Train / validation / test & 93 / 11 / 13 \\
+    Stage~2 classification pool & CFS head images with healthy/pinkeye folder labels & 408 \\
+    Stage~2 usable crops & Images with YOLO eye crop above confidence threshold & 394 \\
+    Stage~2 no detection & No box above threshold; set aside for manual review & 14 \\
+    Stage~2 healthy crops & Usable healthy-labeled crops & 309 \\
+    Stage~2 pinkeye crops & Usable pinkeye-labeled crops & 85 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Figure~\ref{datasetdist} summarizes the Stage~2 class counts used in all experiments.
+
+\begin{figure}
+  \centering
+  \includegraphics[width=0.82\linewidth]{Figures/dataset_distribution.pdf}
+  \caption{Class distribution of usable Stage~2 eye crops ($n{=}394$): 309 healthy (78.4\,\%) and 85 pinkeye (21.6\,\%), matching folder labels after YOLO cropping.}
+  \label{datasetdist}
+\end{figure}
+
+\section{Methods} % and Materials}
+\label{method}
+
+The proposed system is a two-stage cascaded pipeline: Stage~1 detects the eye region in each cattle head image and Stage~2 classifies the cropped eye images to discriminate between healthy eyes and eyes affected by IBK. This approach is detailed as follows. 
+
+\subsection{Stage~1: Eye Localization with YOLOv8}
+\label{stage1}
+
+Since the goal is to predict whether the eye shows signs of IBK, the first step is to localize the eye in each cattle head image. You Only Look Once (YOLO; \citealp{redmon2016you}) is a widely used family of detectors for fast object localization. We fine-tuned a YOLOv8n detector on 117 cattle head images with Roboflow-exported eye bounding boxes (single class \texttt{eye}, YOLO-normalized coordinates). All 117 label files were validated for image--label pairing, coordinate ranges, and class ID${}=0$ prior to training. The dataset was split deterministically using a random shuffle with seed 42 into training (80\,\%, 93 images), validation (10\,\%, 11 images), and test (10\,\%, 13 images), matching the logged detector training report.
+
+The best detector checkpoint was applied to all 408 classification images with confidence threshold 0.25 and symmetric padding 10\,\% around each box (clamped to image bounds), matching the detector inference settings above (confidence 0.25, 10\,\% symmetric padding). Figure \ref{localization} illustrates a representative example of the eye detection and subsequent cropping process. The Roboflow export was checked with a validation script (format, bounds, class ID). The trained detector was then applied to all 408 Stage~2 head images for inference-time cropping; this inference pass is independent of the 117-image detector training corpus.
+
+\begin{figure}
+\centering
+\begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\textwidth]{Figures/eyedetect.png}
+    \caption{Eye Detection in Original Image.}
+    \label{fig:first}
+\end{subfigure}
+\hfill
+\begin{subfigure}{0.48\textwidth}
+    \includegraphics[width=\textwidth]{Figures/eyecrop.png}
+    \caption{Cropped Eye Image.}
+    \label{fig:second}
+\end{subfigure}
+\caption{Eye Localization and Crop}
+\label{localization}
+\end{figure}
+
+
+
+A YOLOv8n model pretrained on MS-COCO was fine-tuned on the 93-image training split using the Ultralytics YOLOv8 API \citep{ultralytics2023yolov8}. The hyperparameters match the logged training run in the project detector report (Table \ref{yoloconfig}).
+
+\begin{table}
+  \caption{YOLOv8n Training Hyperparameters (Stage~1)}
+  \label{yoloconfig}
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    Base model        & YOLOv8n (pretrained, MS-COCO) \\
+    Epochs            & 100 \\
+    Image size        & $640 \times 640$ \\
+    Batch size        & 16 \\
+    Optimizer         & AdamW (framework default LR schedule) \\
+    Training images   & 93 \\
+    Validation images & 11 \\
+    Test images       & 13 \\
+    Random seed       & 42 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+
+\subsection{Stage~2: Classification Models}
+\label{stage2}
+
+The classification pool comprised 408 cattle head images with folder labels (healthy/pinkeye). After YOLOv8 inference and cropping at confidence 0.25, 394 images yielded usable eye crops; 14 images had no passing detection and were set aside for manual review. %\cite{advisor_summary}. 
+The Stage~2 dataset therefore contains 309 healthy and 85 pinkeye crops (78.4\,\% / 21.6\,\%). Images are resized to $224 \times 224$ for classification. The following deep learning models are used to classify the images: 
+
+\begin{itemize}
+\item \textbf{ResNet18} \citep{he2016resnet} with ImageNet-1k weights was adapted by replacing the final fully connected layer with a $512 \rightarrow 2$ head and fine-tuning the full network. 
+\item \textbf{EfficientNet-B0} \citep{tan2019efficientnet} with ImageNet-1k weights was adapted with a $1280 \rightarrow 2$ classifier head and end-to-end fine-tuning.
+\item \textbf{Baseline CNN+Transformer Hybrid:} The baseline hybrid uses a ResNet18 feature extractor (final-stage feature map), a $1 \times 1$ convolutional projection to a 256-dimensional token embedding, a two-layer Transformer encoder with eight attention heads, dropout 0.1, pre-normalization, mean pooling over spatial tokens, and a LayerNorm plus linear classification head \citep{rw2019timm}. Architectural hyperparameters are summarized in Table~\ref{tab:baseline_cnn_transformer}.
+\item \textbf{Strong CNN$+$Transformer:} The Strong variant uses an EfficientNet-B0 backbone (features-only), $1 \times 1$ projection with BatchNorm and GELU, patch tokens with a learnable CLS token and learnable positional embeddings, a pre-norm Transformer encoder ($L{=}3$, $h{=}4$, $d{=}256$), and an MLP classification head on the CLS output \citep{rw2019timm}. Hyperparameters are summarized in Table~\ref{strongconfig}.
+\end{itemize}
+
+
+
+\begin{table}
+  \caption{Strong CNN+Transformer Architectural Hyperparameters}
+  \label{strongconfig}
+  \centering
+  \begin{tabular}{ll}
+    \toprule
+    \textbf{Parameter}        & \textbf{Value} \\
+    \midrule
+    CNN backbone              & EfficientNet-B0 (pretrained) \\
+    Embedding dimension $d$   & 256 \\
+    Transformer heads $h$     & 4 \\
+    Transformer layers $L$    & 3 \\
+    MLP ratio                 & 4.0 \\
+    Dropout                   & 0.1 \\
+    Attention dropout         & 0.1 \\
+    Token norm                & Pre-LayerNorm \\
+    Activation                & GELU \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[t]
+  \caption{Baseline CNN+Transformer architectural hyperparameters.}
+  \label{tab:baseline_cnn_transformer}
+  \centering
+  \begin{tabular}{lc}
+    \toprule
+    \textbf{Parameter} & \textbf{Value} \\
+    \midrule
+    CNN backbone & ResNet18 \\
+    Projection & $1 \times 1$ convolution \\
+    Embedding dimension & 256 \\
+    Transformer layers & 2 \\
+    Attention heads & 8 \\
+    Dropout & 0.1 \\
+    Pooling & Mean pooling over spatial tokens \\
+    Classifier head & LayerNorm + linear layer \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+For Stage~2, with 394 crops, we used stratified 5-fold cross-validation with random seed~42, preserving the healthy/pinkeye ratio in each fold while stratifying on the binary label at the crop/image-file level. Animal identifiers were not used to constrain folds; therefore, left/right views or repeated images from the same animal or capture session could appear in different folds. Each fold uses four parts for training and one for validation; metrics are summarized as mean and standard deviation across folds. Training used weighted cross-entropy with class weights $w_c = N / (K n_c)$ over the \emph{training-fold} sample counts (inverse frequency within each fold). This upweights the minority pinkeye class relative to healthy samples. Optimization used AdamW \citep{loshchilov2018adamw} with learning rate $10^{-4}$ and weight decay $10^{-4}$. Early stopping monitored validation F1 on the pinkeye class with patience 8 and minimum improvement $\delta = 10^{-4}$. For each validation fold we report accuracy, balanced accuracy, precision/recall/F1 for the pinkeye (minority) class, and ROC-AUC (one-vs-rest using predicted pinkeye probability). The primary score for comparing augmentation settings is F1 on pinkeye denoted by F1$_{\mathrm{PE}}$.
+
+
+All Step~2 benchmarks and augmentation studies were run as batch GPU jobs on a shared cluster managed by the SLURM workload scheduler. Every study used the same stratified 5-fold split (seed~42), weighted cross-entropy, AdamW learning rate $10^{-4}$ (weight decay $10^{-4}$), batch size~8, early stopping on validation F1$_{\mathrm{PE}}$ with patience~8 (minimum improvement $\delta{=}10^{-4}$), and CUDA acceleration with the centre's module stack. Training was capped at five epochs per fold unless stopped earlier by early stopping. Default settings used for ad hoc interactive runs may differ; all figures and tables in Section~\ref{results} follow this cluster protocol.
+
+\subsection{Implementation and reproducibility}
+\label{impl_repro}
+
+The eye detector was trained with the Ultralytics YOLO implementation using a YOLOv8n checkpoint pretrained on MS-COCO, $640 \times 640$ inputs, batch size 16, and 100 epochs. The logged detector environment reported Ultralytics 8.4.21, PyTorch 2.8.0, CUDA 12.8, and a Tesla V100-PCIE-16GB GPU.
+
+The 117 annotated detector images were split into training, validation, and test subsets using a deterministic random split with seed 42, yielding 93, 11, and 13 images, respectively.
+
+For Stage~2 classification, images were resized to $224 \times 224$. Experiments used AdamW optimization with learning rate $10^{-4}$ and weight decay $10^{-4}$, batch size 8, weighted cross-entropy, stratified 5-fold cross-validation with seed 42, and early stopping based on validation F1-score for the pinkeye class with patience 8 and minimum improvement $10^{-4}$. Class weights were computed from the training-fold label counts using binary inverse-frequency scaling. Metrics were reported as mean and standard deviation across the five folds.
+
+
+The proposed %system is a 
+two-stage cascaded pipeline, illustrated in Figure \ref{workflow}. In the first stage a YOLOv8-based object detector localizes the eye region in each cattle head image. The detected bounding box is padded and cropped, producing a standardized eye-region image that forms the input to Stage~2. In the second stage, four deep classification models are trained and evaluated on the cropped eye images to discriminate between healthy eyes and eyes affected by IBK.
+
+
+\begin{figure}
+    \centering
+    \includegraphics[width=\textwidth]{Figures/workflow_v2.png}
+    \caption{Overall workflow of the proposed two-stage bovine pinkeye detection pipeline.}% The input consists of cattle head images with healthy and pinkeye labels, together with eye-bounding-box annotations for detector training. In Stage~1, a YOLOv8n detector localizes the eye region using bounding-box prediction. The detected eye region is then cropped with padding and resized to $224 \times 224$ pixels to create the region-of-interest input for Stage~2. In Stage~2, four binary classification models, including ResNet18, EfficientNet-B0, CNN+Transformer, and Strong CNN+Transformer, classify each cropped eye image as healthy or pinkeye. Model performance is evaluated using stratified 5-fold cross-validation, weighted cross-entropy for class imbalance, and metrics including accuracy, balanced accuracy, pinkeye-class F1-score ($F1_{\mathrm{PE}}$), and ROC-AUC. A pilot class-conditional DDPM synthetic augmentation branch is also shown as a secondary extension for future controlled mixed-training evaluation.}
+    \label{workflow}
+\end{figure}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\section{Results}
+\label{results}
+In the first step of eye localization, a YOLOv8-based detector was developed using a manually annotated dataset of 117 cow images with a single target class (eye), for which all annotations were verified as valid with no errors. The dataset was divided into training, validation, and test sets of 93, 11, and 13 images, respectively. Model performance was evaluated using standard detection metrics, including precision, recall, mAP50 (mean Average Precision at a $0.50$ intersection over union threshold), and mAP50-95 (averaged across stricter intersection over union thresholds). On the held-out validation split ($n=11$ images), the fine-tuned YOLOv8n detector achieved precision of 1.000, recall of 0.999, mAP50 of 0.995, and mAP50-95 of 0.631 (Table~\ref{tab:loc}). These values indicate strong internal localization performance under the available annotation distribution. However, because the validation and test subsets are small, these detector results should be interpreted as preliminary internal evidence of localization feasibility rather than field-wide generalization.
+
+\begin{table}
+\centering
+\caption{YOLOv8 eye detection metrics on the internal validation split.}\label{tab:loc}
+\begin{tabular}{c|c|c|c|c}
+\hline
+Metric & Precision & Recall & mAP50 & mAP50-95 \\
+\hline
+Value & 1.000 & 0.999 & 0.995 & 0.631\\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+To assess downstream applicability, the trained detector was applied to the separate 408-image Stage~2 classification pool. Eye regions were detected in 394 images, while 14 images had no passing detection and were retained for manual review. The resulting classification dataset contained 309 healthy crops and 85 pinkeye crops. These results support the feasibility of eye-localized classification, while larger external detection datasets are still needed to confirm detector robustness across broader field conditions.
+%
+%
+%Following the eye localization and cropping process, the resulting classification dataset reflects a moderate class imbalance. To rigorously evaluate model performance, a 5-fold stratified cross-validation (CV) framework was employed to preserve class proportions across folds. Each model was trained for up to $5$ epochs per fold, with early stopping implemented to prevent overfitting. To further address class imbalance, a weighted cross-entropy loss function was adopted, assigning higher importance to the minority (pinkeye) class. This evaluation protocol ensures a robust and fair comparison of classification models while promoting stable and generalizable performance.
+
+Following the eye localization and cropping process, the resulting classification dataset reflects a moderate class imbalance. The following four training augmentation policies were compared. 
+\begin{enumerate}
+\item \textbf{Full augmentation} defines the primary benchmark: random resized crop, horizontal flip, rotation ($\pm 10^{\circ}$), color jitter, and mild affine transforms, with validation and test limited to resize and ImageNet normalization \citep{rw2019timm}.
+\item  \textbf{No-color augmentation} retained flip, rotation, and light Gaussian noise but omitted color jitter.
+\item \textbf{Flip and rotation only} removed Gaussian noise relative to (ii). 
+\item \textbf{Minority-only flip and rotation} applied geometric augmentation only to pinkeye-labeled training crops.
+\end{enumerate}
+We compared these four augmentation policies keeping the same folds, loss, and stopping rule within each compared study. Model sets varied slightly by experiment (all four models for configurations (1) and (2); subsets for (3) and (4) as listed in the tables). All quantitative results reported in Tables~\ref{benchmark}--\ref{tab:full_comparison} were obtained from real Stage~2 eye crops only. Class-conditional DDPM samples were used only for qualitative pilot visualization and were not mixed into the classifier training folds for the reported benchmarks. Figure \ref{ddpm_qualitative1} shows an example for healthy and pinkeye crops and class-conditional DDPM samples from the pilot synthetic augmentation study.
+
+
+\begin{figure}
+  \centering
+  \begin{tabular}{cc}
+    \includegraphics[width=0.42\textwidth,height=0.15\textheight]{Figures/ddpm_healthy_original.jpg} &
+    \includegraphics[width=0.42\textwidth,height=0.15\textheight]{Figures/ddpm_healthy_synthetic.png} \\
+    \footnotesize (a)~Healthy crop (real) &
+    \footnotesize (b)~Healthy (DDPM synthetic) \\[8pt]
+    \includegraphics[width=0.42\textwidth,height=0.15\textheight]{Figures/ddpm_pinkeye_original.jpg} &
+    \includegraphics[width=0.42\textwidth,height=0.15\textheight]{Figures/ddpm_pinkeye_synthetic.png} \\
+    \footnotesize (c)~Pinkeye crop (real) &
+    \footnotesize (d)~Pinkeye (DDPM synthetic)
+  \end{tabular}
+  \caption{Qualitative pilot examples only. For each class, one real Stage~2 crop is shown beside a representative class-conditional DDPM sample trained on cropped-eye data. DDPM samples were not used in the quantitative benchmark reported in Tables~\ref{benchmark}--\ref{tab:full_comparison}; systematic DDPM-augmented training and evaluation are left to future work. }%The DDPM training configuration used batch size~16, $T{=}10{,}000$, and 2048~epochs.}
+  \label{ddpm_qualitative1}
+\end{figure}
+
+To rigorously evaluate model performance, a 5-fold stratified cross-validation (CV) framework was employed to preserve class proportions across folds. Each model was trained for up to $5$ epochs per fold, with early stopping implemented to prevent overfitting. To further address class imbalance, a weighted cross-entropy loss function was adopted, assigning higher importance to the minority (pinkeye) class. This evaluation protocol ensures a robust and fair comparison of classification models while promoting stable and generalizable performance. Table \ref{benchmark} lists 5-fold mean and the standard deviation of different metrics for different models under the full augmentation configuration. Figure \ref{f1bar} visualizes mean F1$_{\mathrm{PE}}$ with error bars using the same fold-wise summaries as Table \ref{benchmark}. 
+
+
+\begin{table}
+  \caption{Stage~2 classification under full augmentation. Results are reported as the mean and standard deviation in parentheses of the 5-fold. Best per column in bold.}
+  \label{benchmark}
+\begin{small}
+  \centering
+  \setlength{\tabcolsep}{5pt}
+  \begin{tabular}{lcccccc}
+    \toprule
+    \textbf{Model}
+      & \textbf{Accuracy}      & \textbf{Bal.\ Acc.}      & \textbf{Precision\textsubscript{PE}}      & \textbf{Recall\textsubscript{PE}}      & \textbf{F1\textsubscript{PE}}      & \textbf{ROC-AUC} \\
+    \midrule
+    ResNet18 & $0.9569$ & $0.9342$ & $0.9094$      & $0.8941$      & $0.8992$     & $\mathbf{0.9867}$ \\
+     & $(0.0144)$ & $(0.0289)$      & $(0.0619)$      & $(0.0644)$      & $(0.0342)$      & $\mathbf{(0.0117)}$ \\
+\hline
+EfficientNet-B0      & $0.9568$      & $\mathbf{0.9383}$      & $0.8980$      & $\mathbf{0.9059}$      & $0.9000$      & $0.9829$ \\
+      & $(0.0114)$      & $\mathbf{(0.0297)}$      & $(0.0393)$      & $\mathbf{(0.0671)}$      & $(0.0279)$      & $(0.0122)$ \\
+\hline
+    CNN+      & $0.9239$      & $0.9132$      & $0.7934$      & $0.8941$      & $0.8369$      & $0.9681$ \\
+    Transformer      & $(0.0235)$      & $(0.0215)$      & $(0.0928)$      & $(0.0492)$      & $(0.0429)$      & $(0.0327)$ \\
+\hline
+    \textbf{Strong CNN+}      & $\mathbf{0.9594}$      & $0.9358$      & $\mathbf{0.9251}$      & $0.8941$      & $\mathbf{0.9051}$      & $0.9850$ \\
+    \textbf{Transformer}      & $\mathbf{(0.0106)}$      & $(0.0229)$      & $\mathbf{(0.0795)}$      & $(0.0644)$      & $\mathbf{(0.0214)}$      & $(0.0024)$ \\
+    \bottomrule
+  \end{tabular}
+%  \\[2pt]
+%  \small PE $=$ pinkeye (minority class). Metrics aggregated from five-fold validation.
+\end{small}
+\end{table}
+
+Overall, all models demonstrate strong classification performance, with accuracy values above 0.92 and AUCs exceeding 0.96, indicating good discriminative ability across methods. Among them, Strong CNN+Transformer achieves the best overall performance, with the highest accuracy ($0.9594$) and F1-score ($0.9051$), suggesting improved balance between precision and recall compared to other models. Its AUC (0.9850) is also competitive, indicating stable ranking performance. ResNet18 and EfficientNet-B0 perform similarly, with nearly identical accuracy (around 0.957). However, EfficientNet-B0 slightly outperforms ResNet18 in balanced accuracy (0.9383 vs. 0.9342) and recall (0.9059 vs. 0.8941), suggesting better handling of class imbalance and improved sensitivity. The baseline CNN+Transformer model underperforms relative to others across most metrics, particularly in F1-score (0.8369) and accuracy (0.9239), indicating that without further optimization, hybrid architectures may not fully leverage their potential. In terms of variability, all models exhibit relatively small standard deviations, indicating stable performance across runs, with Strong CNN+Transformer showing particularly consistent AUC ($\pm 0.0024$). Table~\ref{tab:per_fold} gives per-fold accuracy and F1$_{\mathrm{PE}}$ for ResNet18 and Strong CNN+Transformer. Table~\ref{tab:confusion} aggregates confusion counts across folds for Strong CNN+Transformer. Fold-level confusion matrices, ROC curves, and learning curves were saved with the original GPU experiments but are omitted here for brevity.
+
+
+\begin{figure}
+  \centering
+  \includegraphics[width=\linewidth]{Figures/benchmark_f1_pinkeye.pdf}
+  \caption{Mean$\,\pm\,$std F1$_{\mathrm{PE}}$ under full augmentation, replotted from the same statistics as Table~\ref{benchmark}.}
+  \label{f1bar}
+\end{figure}
+
+
+
+\begin{table}
+  \caption{Per-fold accuracy and F1$_{\mathrm{PE}}$ (full augmentation).}
+  \label{tab:per_fold}
+  \centering
+  \begin{tabular}{ccccc}
+    \toprule
+    \multirow{2}{*}{\textbf{Fold}}
+      & \multicolumn{2}{c}{\textbf{ResNet18}}
+      & \multicolumn{2}{c}{\textbf{Strong CNN+T}} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+      & Acc. & F1\textsubscript{PE}
+      & Acc. & F1\textsubscript{PE} \\
+    \midrule
+    1 & 0.9494 & 0.8889 & 0.9494 & 0.8889 \\
+    2 & 0.9620 & 0.9143 & 0.9747 & 0.9412 \\
+    3 & 0.9747 & 0.9412 & 0.9494 & 0.8889 \\
+    4 & 0.9367 & 0.8485 & 0.9620 & 0.9032 \\
+    5 & 0.9615 & 0.9032 & 0.9615 & 0.9032 \\
+    \midrule
+    Mean & 0.9569 & 0.8992 & 0.9594 & 0.9051 \\
+    Std  & 0.0144 & 0.0342 & 0.0106 & 0.0214 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}
+  \caption{Aggregated confusion matrix for Strong CNN+Transformer (sum over validation folds; total samples $=394$).}
+  \label{tab:confusion}
+  \centering
+  \begin{tabular}{ccc}
+    \toprule
+    %\multirow{2}{*}{
+    \textbf{True $\backslash$ Pred}
+      & \textbf{Healthy}
+      & \textbf{Pinkeye} \\
+    \midrule
+    \textbf{Healthy}  & 302 & \phantom{0}7 \\
+    \textbf{Pinkeye} & \phantom{0}9 & 76 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+We further analyze the dataset with augmentation experiments to deal with the imbalance issue. Three different augmentations have been included: with color-based augmentation, Gaussian noise augmentation, and minority-only augmentation. We first evaluated the impact of color-based augmentation by comparing a full augmentation strategy (including color jitter and affine transformations) with a reduced ``no-color" setup, which applied only geometric transformations (flipping, rotation) and mild Gaussian noise. The results reveal model-dependent effects. For ResNet18, removing color and affine augmentations led to improved performance, with increases in F1-score ($+0.0198$) and accuracy ($+0.0076$). In contrast, EfficientNet-B0 and the Strong CNN+Transformer experienced performance declines under the no-color setting, with decreases in F1-score of $-0.0279$ and $-0.0379$, respectively. These findings suggest that color and affine augmentations contribute positively to performance for more complex architectures, likely by enhancing feature diversity and robustness. However, for ResNet18, a simpler augmentation strategy appears more effective, potentially due to reduced over-regularization or better alignment with the model's capacity.
+
+
+\begin{table}
+  \caption{Effect of removing color-related augmentation: mean F1$_{\mathrm{PE}}$ and accuracy (5-fold mean).}
+  \label{tab:no_color_delta}
+  \centering
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Model}
+      & \textbf{F1\textsubscript{PE} (full)}
+      & \textbf{F1\textsubscript{PE} (no-col)}
+      & \textbf{$\Delta$F1}
+      & \textbf{$\Delta$Acc} \\
+    \midrule
+    ResNet18
+      & 0.8992 & \textbf{0.9190} & \textbf{+0.0198} & +0.0076 \\
+    EfficientNet-B0
+      & \textbf{0.9000} & 0.8721 & $-$0.0279 & $-$0.0152 \\
+    CNN+Transformer
+      & 0.8369 & 0.8272 & $-$0.0097 & $-$0.0001 \\
+    Strong CNN+T
+      & \textbf{0.9051} & 0.8672 & $-$0.0379 & $-$0.0153 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+To assess the contribution of Gaussian noise, we compared a setting using only geometric transformations (flip and rotation) with the no-color augmentation setup, which additionally included Gaussian noise. The results indicate that Gaussian noise has differing effects across model architectures. For ResNet18 and EfficientNet-B0, removing Gaussian noise led to decreases in F1-score ($-0.0210$ and $-0.0202$, respectively), suggesting that noise injection serves as an effective regularization mechanism for these CNN-based models. In contrast, the Strong CNN+Transformer model showed an improvement in F1-score ($+0.0117$) when Gaussian noise was excluded, indicating that such perturbations may interfere with the hybrid model's feature learning process. Overall, these findings suggest that Gaussian noise augmentation benefits standard CNN architectures by improving robustness, but may be detrimental to more complex hybrid models, where it could introduce unnecessary variability.
+
+\begin{table}
+  \caption{Gaussian noise ablation: mean F1$_{\mathrm{PE}}$.
+    $\Delta$ is flip+rotation (no noise) minus no-colour+noise.}
+  \label{tab:ablation_noise}
+  \centering
+  \begin{tabular}{lccc}
+    \toprule
+    \textbf{Model}
+      & \textbf{No-col+noise}
+      & \textbf{Flip+rot}
+      & \textbf{$\Delta$F1\textsubscript{PE}} \\
+    \midrule
+    ResNet18          & 0.9190 & 0.8979 & $-$0.0210 \\
+    EfficientNet-B0   & 0.8721 & 0.8518 & $-$0.0202 \\
+    Strong CNN+T      & 0.8672 & \textbf{0.8788} & \textbf{+0.0117} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+We further evaluated a targeted augmentation strategy in which geometric transformations (flip and rotation) were applied exclusively to the minority class (pinkeye). Under this setting, ResNet18 achieved the best performance among the evaluated models, with an F1-score of $0.9060 (\pm 0.0282)$. However, this configuration did not surpass the best results obtained under previous augmentation strategies for any of the models. These findings suggest that while minority-only augmentation can provide modest improvements in specific cases, it does not consistently enhance overall model performance. In particular, focusing augmentation solely on the minority class may be insufficient to fully address class imbalance, indicating that more comprehensive or balanced augmentation strategies are likely needed.
+
+\begin{table}
+\scriptsize
+  \caption{Minority-only versus all-class geometric augmentation
+    (mean F1$_{\mathrm{PE}}$).}
+  \label{tab:ablation_minority}
+  \centering
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular}{lcccc}
+    \toprule
+    \textbf{Model}
+      & \textbf{No-col+noise}
+      & \textbf{Flip+rot (all)}
+      & \textbf{Flip+rot (min.)}
+      & \textbf{Best setting} \\
+    \midrule
+    ResNet18
+      & \textbf{0.9190} & 0.8979 & 0.9060 & no-col+noise \\
+    EfficientNet-B0
+      & \textbf{0.8721} & 0.8518 & 0.8624 & no-col+noise \\
+    Strong CNN+T
+      & 0.8672 & \textbf{0.8788} & 0.8582 & flip+rot (all) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+
+To summarize, the results demonstrate that eye-crop-based classification is a viable approach, as consistently strong performance across multiple architectures indicates that the eye region contains sufficient discriminative information for the task. Model performance, however, is sensitive to the choice of augmentation strategy. While the Strong CNN+Transformer achieves the best overall performance under the baseline setting, ResNet18 exhibits greater robustness under more constrained or controlled augmentation regimes. The use of weighted cross-entropy in conjunction with stratified cross-validation effectively mitigates class imbalance, yielding stable minority-class recall and F1-scores across models. Notably, the augmentation policy emerges as a critical factor influencing performance, with even minor changes in transformation strategies leading to substantial variations in minority-class F1-score.
+
+\begin{table}[t]
+\centering
+\caption{Best mean accuracy and pinkeye-class F1-score by augmentation regime. Values are reported as mean $\pm$ standard deviation across five folds.}
+\label{tab:full_comparison}
+\begin{tabular}{llcc}
+\toprule
+\textbf{Configuration} & \textbf{Best model} & \textbf{Accuracy} & \textbf{F1$_{\mathrm{PE}}$} \\
+\midrule
+Full augmentation & Strong CNN+Transformer & $0.9594 \pm 0.0106$ & $0.9051 \pm 0.0214$ \\
+No color + Gaussian noise & ResNet18 & $0.9645 \pm 0.0165$ & $0.9190 \pm 0.0374$ \\
+Geometric only & ResNet18 & $0.9543 \pm 0.0147$ & $0.8979 \pm 0.0312$ \\
+Minority-only augmentation & ResNet18 & $0.9594 \pm 0.0105$ & $0.9060 \pm 0.0282$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%\textcolor{red}{\textbf{Possible extension:}}
+
+
+\section{Discussion}
+\label{discussion}
+
+Strong CNN+Transformer leads on mean accuracy and F1$_{\mathrm{PE}}$ when the richer augmentation policy is used, while ResNet18 achieves the best mean ROC-AUC in Table \ref{benchmark} and the best mean F1$_{\mathrm{PE}}$ under the no-color regime (Table~\ref{tab:full_comparison}). The ablations indicate that color and affine regularization in policy~(i) particularly benefit the deeper CNN and hybrid models, whereas the shallow ResNet benefits when color perturbations are omitted.
+
+Gradient-based Grad-CAM visualizations \citep{selvaraju2017gradcam} were computed for the CNN baselines during training. Illustrative overlays are not reproduced in this manuscript; qualitatively, saliency tended to align with conjunctival and peripheral corneal regions on pinkeye crops, consistent with clinical presentation.
+
+The dataset size (85 pinkeye crops) limits generalization claims. We trained class-conditional DDPMs as a pilot exploration of synthetic appearance diversity \citep{ho2020ddpm}. These synthetic samples were not used in the reported 5-fold classifier benchmarks. Systematic synthetic-data curation, mixed real/synthetic classifier training, and re-evaluation under the same benchmark protocol remain future work. Broader directions include larger multi-site collections, severity grading, and external validation.
+
+\section{Limitations}
+\label{limitations}
+
+This study has several limitations relevant to interpretation and deployment. First, the usable classification dataset is relatively small and imbalanced, containing 394 eye crops with only 85 pinkeye examples. Although weighted loss and stratified cross-validation were used to reduce the impact of class imbalance, minority-class estimates remain sensitive to the limited number of positive cases.
+
+Second, cross-validation was performed at the labeled crop/image-file level with class stratification. Animal identifiers were not used to constrain folds. Therefore, correlated views, such as left and right images from the same animal or images from the same capture session, could appear in different folds. This may lead to optimistic internal validation estimates relative to strictly animal-held-out evaluation. Future work should use animal-level grouped validation and external cohorts.
+
+Third, the YOLOv8 detector was trained and evaluated on a limited annotated dataset of 117 images, with small validation and test subsets. The localization results support internal consistency with the available annotation distribution, but they do not replace large-scale validation across farms, breeds, lighting conditions, camera devices, and field environments.
+
+Finally, DDPM-based synthetic images were explored only as a qualitative pilot extension in the current manuscript. They were not used in the quantitative classifier benchmarks. Future work should evaluate curated synthetic augmentation through controlled real-only versus real-plus-synthetic training comparisons.
+
+\section{Conclusion}
+In this study, we advance early detection of infectious bovine keratoconjunctivitis (IBK) by evaluating deep learning classifiers on curated ocular image crops and exploring augmentation policies that enhance model robustness. Building on the need for earlier, field-deployable screening beyond clinical signs and post-onset diagnostics \citep{brown1998, angelos2015}, our results indicate that carefully designed color and affine regularization particularly benefit deeper CNN and hybrid architectures, while shallower ResNet variants perform best when color perturbations are reduced. Grad-CAM saliency localized to conjunctival and peripheral corneal regions on positive cases, aligning model attention with expected clinical pathology and providing face-valid interpretability for chute-side or pasture-based screening workflows.
+
+Despite promising findings, the dataset size (85 pinkeye crops) constrains generalizability and motivates larger, multi-site collections with standardized imaging, breed diversity, and varied lighting. We explored a class-conditional denoising diffusion probabilistic model (DDPM) to generate synthetic ocular images as a principled path toward augmentation; synthetic DDPM samples were not used in the reported quantitative benchmarks, and systematic Stage~2 fine-tuning with mixed real/synthetic training remains future work \citep{ho2020ddpm}. Downstream priorities include prospective external validation, severity grading, and comparisons against skilled human raters; evaluation of object-detection pipelines (e.g., Ultralytics YOLO) for end-to-end eye localization in unconstrained settings; and integration with laboratory and molecular tools such as PCR for Moraxella spp. to form hybrid decision-support systems \citep{angelos2007, angelos2015}. Longer term, coupling phenotypic signals with genomic and microbiome insights may enable proactive risk stratification at the herd level \citep{kizilkaya2013, holman2017, gupta2023}.
+
+Collectively, this work demonstrates that modern computer vision methods supported by interpretable attention maps and rigorous augmentation can help shift IBK management from reactive treatment to earlier, targeted intervention. Such tools have the potential to reduce production losses, improve animal welfare, and support judicious antimicrobial use, provided they are validated across environments and integrated into practical husbandry workflows. By outlining a reproducible benchmark and a roadmap for synthetic augmentation and external validation, we establish a foundation for scalable, field-ready IBK screening systems that complement laboratory diagnostics and accelerate data-driven cattle health management.
+
+\section{Disclosure statement}
+\label{disclosure-statement}
+
+The authors declare no relevant disclosures of competing interests.
+
+
+
+\section{Data Availability Statement}
+\label{data-availability-statement}
+
+This data and codes for this work will become publicly available upon acceptance.
+
+ 
+ \bibliographystyle{elsarticle-harv} 
+ \bibliography{cas-refs}
+\end{document}
